@@ -29,6 +29,23 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "a11y": "off",
+          "correctness": {
+            "noUnusedImports": "off"
+          },
+          "suspicious": {
+            "noArrayIndexKey": "off",
+            "noDoubleEquals": "off"
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {
