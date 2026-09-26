@@ -522,11 +522,41 @@
     animation: cc-sheen 900ms var(--ease-out-soft);
   }
 
+  /* The report markers hovering over the auth illustration. Absolute units,
+     not the percentages cc-drift uses: a percentage transform on an SVG group
+     resolves against its own bounding box, so every marker would travel a
+     different distance. */
+  @keyframes cc-float {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-7px);
+    }
+  }
+  .cc-float {
+    animation: cc-float 5.5s ease-in-out infinite;
+  }
+
+  /* The dotted leaders running from each marker down into the city, drawn as
+     movement along the line rather than a line that blinks. */
+  @keyframes cc-dash {
+    to {
+      stroke-dashoffset: -16;
+    }
+  }
+  .cc-dash {
+    animation: cc-dash 1.6s linear infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .cc-rise,
     .cc-fade,
     .cc-pop,
     .cc-reveal,
+    .cc-float,
+    .cc-dash,
     .cc-stagger > * {
       animation: none;
     }

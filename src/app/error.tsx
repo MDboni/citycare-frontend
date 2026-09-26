@@ -1,15 +1,20 @@
 "use client";
 
-import { RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
+import { LogOutIcon, RefreshCwIcon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/providers";
 import { routes } from "@/routes";
 
 /**
  * The last resort for a render that threw. Data failures are handled inside the
  * pages by ErrorState, so anything arriving here is a genuine bug — which is why
  * the digest is shown rather than a friendly guess at what went wrong.
+ *
+ * This one replaces the site shell, header and all, so Sign out is offered
+ * outright: the account menu it would normally live in is gone, and "try again"
+ * is no help at all when the thing that broke is the session itself.
  */
 export default function GlobalError({
   error,
@@ -18,6 +23,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { isAuthenticated, signOut } = useAuth();
+
   return (
     <div className="surface-wash flex min-h-dvh flex-col">
       <header className="page-shell flex h-14 items-center">
@@ -54,6 +61,18 @@ export default function GlobalError({
           >
             Back to the homepage
           </Button>
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => {
+                void signOut();
+              }}
+            >
+              <LogOutIcon data-icon="inline-start" />
+              Sign out
+            </Button>
+          )}
         </div>
       </main>
     </div>

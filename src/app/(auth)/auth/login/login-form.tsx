@@ -4,10 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { GoogleButton } from "@/components/auth/google-button";
+import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { PasswordField, TextField } from "@/components/shared/form-fields";
 import { Button } from "@/components/ui/button";
 import { FieldSeparator } from "@/components/ui/field";
@@ -17,6 +19,7 @@ import { saveChallenge } from "@/lib/challenge";
 import { getDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
+import type { Role } from "@/types";
 import { type LoginValues, loginSchema } from "@/validation";
 
 export function LoginForm() {
@@ -24,6 +27,16 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
   const login = useLogin();
+
+  /**
+   * Set when the credentials were right but the account is staff. Nothing is
+   * stored in that case — StaffAccountNotice explains why refusing beats
+   * signing them in and letting every page fail.
+   */
+  const [staff, setStaff] = useState<{
+    name: string;
+    role: Exclude<Role, "CITIZEN">;
+  } | null>(null);
 
   const {
     register,
@@ -57,10 +70,17 @@ export function LoginForm() {
         return;
       }
 
+      // An officer or admin belongs in the staff console, and is told so
+      // before signIn stores anything: a staff session on this side is valid
+      // but 403s on every page, including the one carrying Sign out.
+      if (result.user.role !== "CITIZEN") {
+        setStaff({ name: result.user.name, role: result.user.role });
+        return;
+      }
+
       await signIn(result);
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-      // An officer or admin belongs in the staff dashboard, not here.
-      router.replace(result.user.role === "CITIZEN" ? next : routes.home);
+      router.replace(next);
     } catch (error) {
       const api = toApiError(error);
 
@@ -77,6 +97,16 @@ export function LoginForm() {
       }
     }
   });
+
+  if (staff) {
+    return (
+      <StaffAccountNotice
+        name={staff.name}
+        role={staff.role}
+        onBack={() => setStaff(null)}
+      />
+    );
+  }
 
   return (
     <AuthCard

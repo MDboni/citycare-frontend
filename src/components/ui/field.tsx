@@ -155,19 +155,29 @@ function FieldSeparator({
       data-slot="field-separator"
       data-content={!!children}
       className={cn(
-        "relative -my-2 h-5 text-sm group-data-[variant=outline]/field-group:-mb-2",
+        "flex items-center gap-3 text-sm group-data-[variant=outline]/field-group:-mb-2",
         className,
       )}
       {...props}
     >
-      <Separator className="absolute inset-0 top-1/2" />
+      {/*
+        Two rules with the label between them, rather than one rule behind a
+        chip. The chip version had to paint over the line with the surface
+        colour, which meant guessing the surface — it said `bg-background` while
+        every caller renders inside a `bg-card` — and had to sit in a fixed h-5
+        box that the label outgrew the moment the body line-height went to 1.6.
+      */}
+      <Separator className="flex-1" />
       {children && (
-        <span
-          className="relative mx-auto block w-fit bg-background px-2 text-muted-foreground"
-          data-slot="field-separator-content"
-        >
-          {children}
-        </span>
+        <>
+          <span
+            className="shrink-0 leading-none text-muted-foreground"
+            data-slot="field-separator-content"
+          >
+            {children}
+          </span>
+          <Separator className="flex-1" />
+        </>
       )}
     </div>
   );

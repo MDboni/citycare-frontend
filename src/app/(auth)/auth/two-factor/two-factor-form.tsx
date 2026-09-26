@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { OtpForm } from "@/components/auth/otp-form";
+import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -21,6 +22,7 @@ import {
 import { saveDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
+import type { Role } from "@/types";
 
 export function TwoFactorForm() {
   const router = useRouter();
@@ -33,6 +35,10 @@ export function TwoFactorForm() {
   const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
+  const [staff, setStaff] = useState<{
+    name: string;
+    role: Exclude<Role, "CITIZEN">;
+  } | null>(null);
 
   useEffect(() => {
     const pending = getChallenge();
@@ -75,14 +81,21 @@ export function TwoFactorForm() {
       });
 
       clearChallenge();
+
+      // The same refusal as the password path — a staff account only reaches
+      // this screen when it has 2FA on, and the code being right changes
+      // nothing about this app being the wrong one for it.
+      if (result.user.role !== "CITIZEN") {
+        setStaff({ name: result.user.name, role: result.user.role });
+        return;
+      }
+
       // Only a citizen ever gets a device token back; staff always type a code.
       saveDeviceToken(result.deviceToken);
       await signIn(result);
 
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-      router.replace(
-        result.user.role === "CITIZEN" ? routes.complaints.list : routes.home,
-      );
+      router.replace(routes.complaints.list);
     } catch (caught) {
       setError(errorMessage(caught));
     }
@@ -108,6 +121,16 @@ export function TwoFactorForm() {
       toast.error(errorMessage(caught));
     }
   };
+
+  if (staff) {
+    return (
+      <StaffAccountNotice
+        name={staff.name}
+        role={staff.role}
+        onBack={() => router.replace(routes.auth.login)}
+      />
+    );
+  }
 
   return (
     <AuthCard
