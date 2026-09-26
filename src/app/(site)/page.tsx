@@ -12,6 +12,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TrackWidget } from "@/components/complaints/track-widget";
+import { CityBanner } from "@/components/home/city-banner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -169,6 +170,9 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
+
+      {/* ---------------------------------------------------------- coverage */}
+      <CityBanner />
 
       {/* ----------------------------------------------------------- how it works */}
       <section className="page-shell py-20 lg:py-28">

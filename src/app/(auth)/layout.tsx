@@ -1,6 +1,6 @@
 import { ClockIcon, MegaphoneIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
-import { CityIllustration } from "@/components/auth/city-illustration";
+import { CityIllustration } from "@/components/shared/city-illustration";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { routes } from "@/routes";
