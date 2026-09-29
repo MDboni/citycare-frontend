@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuHeader,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -55,13 +55,13 @@ export function UserMenu() {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="space-y-1.5 px-2 py-2 text-foreground">
+        <DropdownMenuHeader className="space-y-1.5 px-2 py-2 text-foreground">
           <p className="truncate text-sm font-medium">{user.name}</p>
           <p className="truncate text-xs font-normal text-muted-foreground">
             {user.email}
           </p>
           <RolePill role={user.role} />
-        </DropdownMenuLabel>
+        </DropdownMenuHeader>
 
         <DropdownMenuSeparator />
 
