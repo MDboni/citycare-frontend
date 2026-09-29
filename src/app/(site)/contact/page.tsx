@@ -3,6 +3,7 @@ import {
   MailIcon,
   MapPinIcon,
   MegaphoneIcon,
+  PhoneIcon,
   SearchIcon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -117,19 +118,55 @@ export default async function ContactPage() {
                         </p>
                       </div>
 
-                      {department.email && (
-                        <p className="flex items-center gap-2 border-t border-border pt-3 text-sm">
-                          <MailIcon
-                            className="size-3.5 shrink-0 text-muted-foreground"
-                            aria-hidden
-                          />
-                          <a
-                            href={`mailto:${department.email}`}
-                            className="truncate underline-offset-4 hover:underline"
-                          >
-                            {department.email}
-                          </a>
-                        </p>
+                      {(department.email ||
+                        department.phone ||
+                        department.address) && (
+                        <div className="space-y-1.5 border-t border-border pt-3">
+                          {department.email && (
+                            <p className="flex items-center gap-2 text-sm">
+                              <MailIcon
+                                className="size-3.5 shrink-0 text-muted-foreground"
+                                aria-hidden
+                              />
+                              <a
+                                href={`mailto:${department.email}`}
+                                className="truncate underline-offset-4 hover:underline"
+                              >
+                                {department.email}
+                              </a>
+                            </p>
+                          )}
+
+                          {department.phone && (
+                            <p className="flex items-center gap-2 text-sm">
+                              <PhoneIcon
+                                className="size-3.5 shrink-0 text-muted-foreground"
+                                aria-hidden
+                              />
+                              {/*
+                                The label keeps the office's own spacing; the
+                                dial string keeps only digits and a leading
+                                plus, which is all a dialler should be handed.
+                              */}
+                              <a
+                                href={`tel:${department.phone.replace(/[^\d+]/g, "")}`}
+                                className="underline-offset-4 hover:underline"
+                              >
+                                {department.phone}
+                              </a>
+                            </p>
+                          )}
+
+                          {department.address && (
+                            <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                              <MapPinIcon
+                                className="mt-0.5 size-3.5 shrink-0"
+                                aria-hidden
+                              />
+                              <span>{department.address}</span>
+                            </p>
+                          )}
+                        </div>
                       )}
                     </CardContent>
                   </Card>

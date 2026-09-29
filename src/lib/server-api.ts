@@ -43,7 +43,10 @@ export async function getPublicList<T>(path: string): Promise<T[]> {
 export type PublicDepartment = {
   id: string;
   name: string;
+  /** All three are nullable: a desk that has not published one shows nothing. */
   email: string | null;
+  phone: string | null;
+  address: string | null;
 };
 
 export type PublicCategory = {

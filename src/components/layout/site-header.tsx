@@ -1,13 +1,19 @@
 "use client";
 
 import { cn } from "cn";
-import { MenuIcon, PlusIcon } from "lucide-react";
+import { ChevronDownIcon, MenuIcon, PlusIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -28,8 +34,6 @@ const PUBLIC_NAV: NavItem[] = [
   { href: routes.track, label: "Track a complaint" },
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
-  { href: routes.about, label: "About" },
-  { href: routes.faq, label: "FAQ" },
 ];
 
 const CITIZEN_NAV: NavItem[] = [
@@ -38,7 +42,13 @@ const CITIZEN_NAV: NavItem[] = [
   { href: routes.payments.list, label: "Payments" },
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
+];
+
+/** The pages you read once. Same three whether or not you are signed in. */
+const INFO_NAV: NavItem[] = [
+  { href: routes.about, label: "About" },
   { href: routes.faq, label: "FAQ" },
+  { href: routes.contact, label: "Contact" },
 ];
 
 const isActive = (pathname: string, href: string) =>
@@ -102,6 +112,42 @@ export function SiteHeader() {
               {item.label}
             </Button>
           ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "text-muted-foreground transition-colors",
+                    INFO_NAV.some((item) => isActive(pathname, item.href)) &&
+                      "bg-muted text-foreground",
+                  )}
+                />
+              }
+            >
+              More
+              <ChevronDownIcon data-icon="inline-end" className="size-3.5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-44">
+              {INFO_NAV.map((item) => (
+                <DropdownMenuItem
+                  key={item.href}
+                  render={
+                    <Link
+                      href={item.href}
+                      aria-current={
+                        isActive(pathname, item.href) ? "page" : undefined
+                      }
+                    />
+                  }
+                >
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
@@ -175,7 +221,7 @@ export function SiteHeader() {
                     <Separator className="mb-2" />
                   </>
                 )}
-                {nav.map((item) => (
+                {[...nav, ...INFO_NAV].map((item) => (
                   <Button
                     key={item.href}
                     variant="ghost"
