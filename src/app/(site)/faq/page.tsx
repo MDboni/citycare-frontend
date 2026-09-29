@@ -1,7 +1,10 @@
 import { ChevronDownIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { formatBdt } from "@/lib/format";
+import { getCategories, getServiceTypes } from "@/lib/server-api";
 import { routes } from "@/routes";
 
 export const metadata: Metadata = {
@@ -21,7 +24,18 @@ export const metadata: Metadata = {
  * and the upvote threshold are the ones the API is running with, not rounded
  * marketing numbers.
  */
-const SECTIONS = [
+/**
+ * Two answers are filled in at render from the live taxonomy rather than
+ * written out here. Both were transcribed from the seed originally and both
+ * had already gone stale — the SLA list quietly omitted a category.
+ */
+const SLA_ANSWER = Symbol("sla");
+const FEES_ANSWER = Symbol("fees");
+
+const SECTIONS: readonly {
+  heading: string;
+  items: readonly { q: string; a: string | symbol }[];
+}[] = [
   {
     heading: "Reporting an issue",
     items: [
@@ -39,17 +53,14 @@ const SECTIONS = [
       },
       {
         q: "Someone already reported the same pothole. Should I file another?",
-        a: "Back theirs instead. Ten upvotes raises a complaint one priority level, so one report with fifty neighbours behind it moves faster than fifty separate reports that each start at the bottom.",
+        a: "Back theirs instead. Crossing ten upvotes lifts a complaint one priority level — once, when it passes ten, not another step per ten. Even so, one report fifty neighbours stand behind outranks fifty separate reports that each start at the bottom.",
       },
     ],
   },
   {
     heading: "The SLA clock",
     items: [
-      {
-        q: "What is the SLA and who sets it?",
-        a: "Every category carries its own target, set by how dangerous the problem is rather than how loudly it is reported. A dangling power cable is 12 hours. Sewer overflow, waterlogging, a missed bin collection and a water supply cut are 24. A street light is 48, a pothole 72, illegal dumping 72, and a damaged road divider 168 — a full week.",
-      },
+      { q: "What is the SLA and who sets it?", a: SLA_ANSWER },
       {
         q: "What happens if the clock runs out?",
         a: "A breach escalates the complaint without anyone having to ask. The countdown stays visible on the complaint the whole time, before and after, so a missed target is on the record rather than quietly reset.",
@@ -69,7 +80,7 @@ const SECTIONS = [
       },
       {
         q: "The problem came back. Can I reopen it?",
-        a: "Yes. A closed complaint can be reopened from its page, and it keeps its original tracking id and history rather than starting a fresh one, so the repeat is visible.",
+        a: "Yes, but not indefinitely: a complaint can be reopened twice, and only within seven days of being marked resolved. Both limits are settings an administrator can change, and the API refuses past either — so if a pothole comes back a month later, file a fresh report rather than waiting on a reopen. A reopen keeps the original tracking id and history, so the repeat stays visible.",
       },
       {
         q: "Can I cancel something I reported by mistake?",
@@ -80,10 +91,7 @@ const SECTIONS = [
   {
     heading: "Services and payments",
     items: [
-      {
-        q: "What can I apply for, and what does it cost?",
-        a: "A birth certificate copy is ৳50, a bulk waste pickup ৳800, holding tax ৳1,500, a trade licence renewal ৳2,500 and a building plan approval ৳5,000. Each application takes its documents and its fee in the same flow.",
-      },
+      { q: "What can I apply for, and what does it cost?", a: FEES_ANSWER },
       {
         q: "How is the fee taken?",
         a: "Through SSLCommerz. You leave CityCare for the gateway, pay there, and come back to a result page. Every successful payment has a receipt and a transaction id attached to the application — CityCare never sees or stores your card.",
@@ -119,9 +127,49 @@ const SECTIONS = [
       },
     ],
   },
-] as const;
+];
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  const [categories, serviceTypes] = await Promise.all([
+    getCategories(),
+    getServiceTypes(),
+  ]);
+
+  const slaLadder = [...categories].sort((a, b) => a.slaHours - b.slaHours);
+  const activeServices = serviceTypes.filter((service) => service.isActive);
+
+  const dynamicAnswers = new Map<symbol, ReactNode>([
+    [
+      SLA_ANSWER,
+      slaLadder.length === 0 ? (
+        "Every category carries its own target, set by how dangerous the problem is rather than how loudly it is reported. The current targets are published on the About page."
+      ) : (
+        <>
+          Every category carries its own target, set by how dangerous the
+          problem is rather than how loudly it is reported. The current targets
+          are{" "}
+          {slaLadder
+            .map((category) => `${category.name} ${category.slaHours}h`)
+            .join(", ")}
+          .
+        </>
+      ),
+    ],
+    [
+      FEES_ANSWER,
+      activeServices.length === 0 ? (
+        "The service catalogue lists what you can apply for and what each one costs. Each application takes its documents and its fee in the same flow."
+      ) : (
+        <>
+          {activeServices
+            .map((service) => `${service.name} is ${formatBdt(service.fee)}`)
+            .join(", ")}
+          . Each application takes its documents and its fee in the same flow.
+        </>
+      ),
+    ],
+  ]);
+
   return (
     <div className="page-shell space-y-12 py-12 lg:py-16">
       <header className="cc-rise max-w-3xl space-y-4">
@@ -153,7 +201,11 @@ export default function FaqPage() {
                       aria-hidden
                     />
                   </summary>
-                  <p className="pb-4 text-sm text-muted-foreground">{item.a}</p>
+                  <p className="pb-4 text-sm text-muted-foreground">
+                    {typeof item.a === "symbol"
+                      ? dynamicAnswers.get(item.a)
+                      : item.a}
+                  </p>
                 </details>
               ))}
             </div>

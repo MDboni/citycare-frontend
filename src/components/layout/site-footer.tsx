@@ -40,7 +40,7 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border bg-card/40">
-      <div className="page-shell grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="page-shell grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-5">
         <div className="space-y-3">
           <div className="flex items-center gap-2.5">
             <LogoMark />

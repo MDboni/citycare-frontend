@@ -141,6 +141,62 @@ export function GridPageSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
+/**
+ * A prose page that reads something before it renders — a heading, a lead
+ * paragraph and a couple of rows of cards beneath it.
+ *
+ * Deliberately not the card grid: these pages open with text, and a skeleton
+ * that promises four cards above the fold then paints two paragraphs is a
+ * worse answer than no skeleton at all.
+ */
+export function ArticlePageSkeleton() {
+  return (
+    <LoadingShell>
+      <div className="max-w-3xl space-y-3">
+        <Skeleton className="h-9 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+      </div>
+      <Skeleton className="h-20 w-full rounded-xl" />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    </LoadingShell>
+  );
+}
+
+/**
+ * The fields of a form with no page shell, for a route whose layout already
+ * draws the heading and the gutters. `FormPageSkeleton` inside one of those
+ * gives doubled padding and a second, phantom page header.
+ */
+export function FormSkeleton({ fields = 5 }: { fields?: number }) {
+  return (
+    <output className="block">
+      <span className="sr-only">Loading</span>
+      <div
+        className="max-w-2xl space-y-5 rounded-xl border border-border p-6"
+        aria-hidden
+      >
+        {Array.from({ length: fields }).map((_, index) => (
+          <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: placeholder fields have no identity.
+            key={`bare-field-${index}`}
+            className="space-y-2"
+          >
+            <Skeleton className="h-3.5 w-28" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ))}
+        <Skeleton className="h-10 w-36" />
+      </div>
+    </output>
+  );
+}
+
 /** A single record: the body on the left, supporting panels on the right. */
 export function DetailPageSkeleton() {
   return (

@@ -38,6 +38,7 @@ const CITIZEN_NAV: NavItem[] = [
   { href: routes.payments.list, label: "Payments" },
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
+  { href: routes.faq, label: "FAQ" },
 ];
 
 const isActive = (pathname: string, href: string) =>
@@ -77,7 +78,7 @@ export function SiteHeader() {
 
         <nav
           aria-label="Main"
-          className="ml-4 hidden items-center gap-1 md:flex"
+          className="ml-4 hidden items-center gap-1 lg:flex"
         >
           {nav.map((item) => (
             <Button
@@ -148,7 +149,7 @@ export function SiteHeader() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="md:hidden"
+                  className="lg:hidden"
                   aria-label="Open menu"
                 />
               }

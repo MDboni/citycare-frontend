@@ -1,6 +1,6 @@
-import { GridPageSkeleton } from "@/components/shared/loading";
+import { ArticlePageSkeleton } from "@/components/shared/loading";
 
-/** Route-level loading UI — a static page of cards. */
+/** Route-level loading UI — this page reads the SLA targets and the fees. */
 export default function Loading() {
-  return <GridPageSkeleton count={4} />;
+  return <ArticlePageSkeleton />;
 }

@@ -31,11 +31,26 @@ import {
   createServiceRequestSchema,
 } from "@/validation";
 
-const STEPS: readonly Step[] = [
-  { id: "service", label: "Service", hint: "What you are applying for" },
-  { id: "details", label: "Details", hint: "What the counter will ask" },
-  { id: "review", label: "Review", hint: "Check, then submit" },
-] as const;
+type WizardStep = Step & {
+  /** Validated before this step will let go. The last step has nothing of its own. */
+  fields: readonly (keyof CreateServiceRequestValues)[];
+};
+
+const STEPS = [
+  {
+    id: "service",
+    label: "Service",
+    hint: "What you are applying for",
+    fields: ["serviceTypeId"],
+  },
+  {
+    id: "details",
+    label: "Details",
+    hint: "What the counter will ask",
+    fields: ["details"],
+  },
+  { id: "review", label: "Review", hint: "Check, then submit", fields: [] },
+] as const satisfies readonly WizardStep[];
 
 /**
  * A service application, as a three-step wizard.
@@ -84,6 +99,28 @@ export function ApplyForm() {
     (service) => service.id === selectedId,
   );
 
+  /**
+   * A `?type=` deep link seeds the field before the list has loaded, so an id
+   * with nothing behind it is not the same as no id. Without this the review
+   * step reads "Not chosen" for a service that is about to be submitted, and
+   * the same happens for a service that exists but has been deactivated.
+   */
+  const serviceUnresolved = Boolean(selectedId) && !selected;
+  const serviceMissing = serviceUnresolved && !serviceTypes.isPending;
+
+  /** Duplicate field names collapse on submit, so they are refused up front. */
+  const duplicateKeys = (() => {
+    const seen = new Set<string>();
+    const clashes = new Set<string>();
+    for (const row of detailRows) {
+      const key = row.key?.trim();
+      if (!key) continue;
+      if (seen.has(key)) clashes.add(key);
+      seen.add(key);
+    }
+    return [...clashes];
+  })();
+
   const options = (serviceTypes.data ?? [])
     .filter((service) => service.isActive)
     .map((service) => ({
@@ -92,8 +129,18 @@ export function ApplyForm() {
       hint: formatBdt(service.fee),
     }));
 
-  /** Rows with a name on them — the only ones that will be sent. */
-  const filledRows = detailRows.filter((row) => row.key?.trim());
+  /**
+   * Rows with a name on them — the only ones that will be sent. Carrying the
+   * field-array id means the review list has a stable key even while two rows
+   * briefly share a name.
+   */
+  const filledRows = fields
+    .map((field, index) => ({
+      id: field.id,
+      key: detailRows[index]?.key ?? "",
+      value: detailRows[index]?.value ?? "",
+    }))
+    .filter((row) => row.key.trim());
 
   /**
    * Each step validates only its own fields, so a missing service is caught
@@ -101,19 +148,15 @@ export function ApplyForm() {
    * block a service that needs none.
    */
   const next = async () => {
-    const ok =
-      step === 0 ? await trigger("serviceTypeId") : await trigger("details");
-    if (ok) setStep((current) => Math.min(current + 1, STEPS.length - 1));
+    const fields = STEPS[step].fields;
+    const ok = fields.length === 0 || (await trigger([...fields]));
+    if (!ok) return;
+    if (step === 0 && !selected) return;
+    if (step === 1 && duplicateKeys.length > 0) return;
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
   };
 
-  const submit = handleSubmit(async (values) => {
-    // Enter on an input submits the form; on an earlier step that means
-    // "next", not "create the application".
-    if (!isLast) {
-      await next();
-      return;
-    }
-
+  const finish = handleSubmit(async (values) => {
     // Empty rows are dropped rather than sent as blank keys.
     const details = Object.fromEntries(
       (values.details ?? [])
@@ -137,10 +180,26 @@ export function ApplyForm() {
       if (!Object.keys(api.fieldErrors).length) toast.error(api.message);
 
       // A rejected field lives on step one or two, so go back to where it is.
-      if (api.fieldErrors.serviceTypeId) setStep(0);
-      else if (api.fieldErrors.details) setStep(1);
+      const rejected = Object.keys(api.fieldErrors);
+      const target = STEPS.findIndex((entry) =>
+        entry.fields.some((field) => rejected.includes(field)),
+      );
+      if (target >= 0) setStep(target);
     }
   });
+
+  /**
+   * Enter inside an input submits the form. On an earlier step that means
+   * "continue", so the whole-form validation never runs until the last step.
+   */
+  const onFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (isLast) {
+      void finish(event);
+      return;
+    }
+    event.preventDefault();
+    void next();
+  };
 
   return (
     <div className="page-shell page-shell-read space-y-6 py-8">
@@ -153,7 +212,7 @@ export function ApplyForm() {
 
       <Card>
         <CardContent className="p-5 sm:p-6">
-          <form onSubmit={submit} className="space-y-5" noValidate>
+          <form onSubmit={onFormSubmit} className="space-y-5" noValidate>
             {step === 0 && (
               <div className="space-y-5">
                 <SelectField
@@ -167,6 +226,16 @@ export function ApplyForm() {
                   control={control}
                   error={errors.serviceTypeId}
                 />
+
+                {serviceMissing && (
+                  <Alert variant="destructive">
+                    <AlertTitle>That service is not available</AlertTitle>
+                    <AlertDescription>
+                      The link you followed points at a service that is no
+                      longer offered. Pick one from the list above.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 {selected && (
                   <Alert>
@@ -256,6 +325,17 @@ export function ApplyForm() {
                   <PlusIcon />
                   Add a detail
                 </Button>
+
+                {duplicateKeys.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Two rows share a name</AlertTitle>
+                    <AlertDescription>
+                      {duplicateKeys.join(", ")} appears more than once. The
+                      application stores one value per name, so rename or remove
+                      the duplicate — otherwise only the last one would be kept.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 
@@ -273,7 +353,10 @@ export function ApplyForm() {
                   <div className="flex items-baseline justify-between gap-4 p-4">
                     <dt className="text-sm text-muted-foreground">Service</dt>
                     <dd className="text-sm font-medium">
-                      {selected?.name ?? "Not chosen"}
+                      {selected?.name ??
+                        (serviceTypes.isPending
+                          ? "Still loading…"
+                          : "Not chosen")}
                     </dd>
                   </div>
                   <div className="flex items-baseline justify-between gap-4 p-4">
@@ -300,14 +383,14 @@ export function ApplyForm() {
                         <ul className="space-y-1.5">
                           {filledRows.map((row) => (
                             <li
-                              key={row.key}
+                              key={row.id}
                               className="flex items-baseline justify-between gap-4 text-sm"
                             >
                               <span className="text-muted-foreground">
                                 {row.key}
                               </span>
                               <span className="min-w-0 truncate font-medium">
-                                {row.value?.trim() || "—"}
+                                {row.value.trim() || "—"}
                               </span>
                             </li>
                           ))}
@@ -352,7 +435,10 @@ export function ApplyForm() {
                   type="button"
                   size="lg"
                   onClick={() => void next()}
-                  disabled={step === 0 && !selectedId}
+                  disabled={
+                    (step === 0 && (!selected || serviceTypes.isPending)) ||
+                    (step === 1 && duplicateKeys.length > 0)
+                  }
                 >
                   Continue
                   <ArrowRightIcon data-icon="inline-end" />

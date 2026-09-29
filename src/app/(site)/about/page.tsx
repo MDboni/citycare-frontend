@@ -11,6 +11,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  getCategories,
+  getDepartmentsWithCategories,
+  getZones,
+} from "@/lib/server-api";
 import { routes } from "@/routes";
 
 export const metadata: Metadata = {
@@ -24,27 +29,6 @@ export const metadata: Metadata = {
     type: "website",
   },
 };
-
-/** Real seeded SLA targets — what a report is actually measured against. */
-const SLA_EXAMPLES = [
-  { category: "Dangling power cable", hours: 12, department: "Electricity" },
-  { category: "Sewer overflow", hours: 24, department: "Water" },
-  { category: "Garbage not collected", hours: 24, department: "Waste" },
-  {
-    category: "Street light not working",
-    hours: 48,
-    department: "Electricity",
-  },
-  { category: "Pothole", hours: 72, department: "Roads" },
-  { category: "Damaged road divider", hours: 168, department: "Roads" },
-] as const;
-
-const DEPARTMENTS = [
-  { name: "Roads", handles: "Potholes, broken footpaths, damaged dividers" },
-  { name: "Electricity", handles: "Street lights, dangling power cables" },
-  { name: "Waste", handles: "Missed collections, illegal dumping" },
-  { name: "Water", handles: "Supply cuts, sewer overflow, waterlogging" },
-] as const;
 
 const ROLES = [
   {
@@ -64,7 +48,21 @@ const ROLES = [
   },
 ] as const;
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [categories, departments, zones] = await Promise.all([
+    getCategories(),
+    getDepartmentsWithCategories(),
+    getZones(),
+  ]);
+
+  // Fastest target first: the ordering is the argument the section makes.
+  const slaLadder = [...categories].sort((a, b) => a.slaHours - b.slaHours);
+
+  const wardNames = zones
+    .flatMap((zone) => zone.wards)
+    .sort((a, b) => a.number - b.number)
+    .map((ward) => ward.name);
+
   return (
     <div className="page-shell space-y-16 py-12 lg:py-16">
       <header className="cc-rise max-w-3xl space-y-4">
@@ -96,19 +94,19 @@ export default function AboutPage() {
         </div>
 
         <ul className="cc-stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SLA_EXAMPLES.map((item) => (
-            <li key={item.category}>
+          {slaLadder.map((category) => (
+            <li key={category.id}>
               <Card className="h-full">
                 <CardContent className="flex items-start justify-between gap-3 p-4">
                   <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-medium">{item.category}</p>
+                    <p className="text-sm font-medium">{category.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {item.department}
+                      {category.department?.name ?? "Unassigned"}
                     </p>
                   </div>
                   <span className="flex shrink-0 items-center gap-1 rounded-lg bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                     <ClockIcon className="size-3.5" aria-hidden />
-                    {item.hours}h
+                    {category.slaHours}h
                   </span>
                 </CardContent>
               </Card>
@@ -116,10 +114,13 @@ export default function AboutPage() {
           ))}
         </ul>
 
-        <p className="text-sm text-muted-foreground">
-          A dangling cable is twelve hours. A damaged road divider is a week.
-          The difference is the point.
-        </p>
+        {slaLadder.length > 1 && (
+          <p className="text-sm text-muted-foreground">
+            The fastest target on the board is {slaLadder[0].slaHours} hours and
+            the slowest is {slaLadder[slaLadder.length - 1].slaHours}. The
+            difference is the point.
+          </p>
+        )}
       </section>
 
       <section className="grid gap-10 lg:grid-cols-2">
@@ -141,7 +142,9 @@ export default function AboutPage() {
         </div>
 
         <div className="space-y-5">
-          <h2 className="h-section">Four departments, ten wards</h2>
+          <h2 className="h-section">
+            {departments.length} departments, {wardNames.length} wards
+          </h2>
           <p className="text-muted-foreground">
             A report routes itself. The category decides the department, the
             ward decides the officer, and nobody has to know an org chart to
@@ -149,14 +152,15 @@ export default function AboutPage() {
           </p>
 
           <ul className="space-y-2.5">
-            {DEPARTMENTS.map((department) => (
+            {departments.map((department) => (
               <li
-                key={department.name}
+                key={department.id}
                 className="rounded-xl border border-border p-4"
               >
                 <p className="text-sm font-medium">{department.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {department.handles}
+                  {department.categories.map((c) => c.name).join(", ") ||
+                    "No categories routed here yet."}
                 </p>
               </li>
             ))}
@@ -168,9 +172,9 @@ export default function AboutPage() {
               aria-hidden
             />
             <p className="text-sm text-muted-foreground">
-              Ten wards across a North and a South zone — Mirpur, Uttara,
-              Gulshan, Banani, Mohakhali, Dhanmondi, Motijheel, Jatrabari, Badda
-              and Tejgaon.
+              {wardNames.length} wards across{" "}
+              {zones.map((zone) => zone.name).join(" and ")}
+              {wardNames.length > 0 && ` — ${wardNames.join(", ")}.`}
             </p>
           </div>
         </div>
@@ -184,9 +188,10 @@ export default function AboutPage() {
             </span>
             <h2 className="h-card text-[17px]">Upvotes that move a queue</h2>
             <p className="text-sm text-muted-foreground">
-              When neighbours back the same issue its priority climbs a step —
-              ten upvotes is one level. A pothole fifty people drive over should
-              not sit behind one nobody reported twice.
+              Crossing ten upvotes lifts a complaint one priority level. It is a
+              single step, not a running tally — but one report fifty neighbours
+              stand behind still outranks fifty separate reports that each start
+              at the bottom.
             </p>
           </CardContent>
         </Card>

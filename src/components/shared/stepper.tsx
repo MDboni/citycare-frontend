@@ -1,3 +1,5 @@
+// biome-ignore-all lint/a11y/noRedundantRoles: role="list" is not redundant here — Tailwind's preflight sets list-style: none, and Safari drops the implicit list role when it does, so a VoiceOver user would never hear "list, 3 items".
+// biome-ignore-all lint/a11y/useSemanticElements: this already is an <ol>; the explicit role is a WebKit workaround, not a stand-in for the element.
 import { cn } from "cn";
 import { CheckIcon } from "lucide-react";
 
@@ -22,7 +24,10 @@ export function Stepper({
   className?: string;
 }) {
   return (
-    <ol className={cn("flex flex-col gap-2 sm:flex-row sm:gap-3", className)}>
+    <ol
+      role="list"
+      className={cn("flex flex-col gap-2 sm:flex-row sm:gap-3", className)}
+    >
       {steps.map((step, index) => {
         const done = index < current;
         const active = index === current;
