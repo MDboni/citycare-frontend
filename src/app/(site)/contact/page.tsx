@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getCategories, getDepartments, getZones } from "@/lib/server-api";
 import { routes } from "@/routes";
+import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -177,7 +178,7 @@ export default async function ContactPage() {
         )}
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <section className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
         <div className="space-y-5">
           <div className="max-w-2xl space-y-2">
             <h2 className="h-section">Zones and wards</h2>
@@ -213,24 +214,28 @@ export default async function ContactPage() {
           )}
         </div>
 
-        <Card>
-          <CardContent className="space-y-3 p-5">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <ClockIcon className="size-[18px]" />
-            </span>
-            <h2 className="h-card text-[17px]">When we are reachable</h2>
-            <p className="text-sm text-muted-foreground">
-              Reports and service applications are taken online around the
-              clock, and the SLA clock does not pause for a weekend — a
-              twelve-hour target is twelve hours whenever it starts.
-            </p>
-            <p className="flex items-start gap-2 text-sm text-muted-foreground">
-              <MapPinIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-              Officers are assigned by ward, so the desk that answers is the one
-              covering the address on the report.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="space-y-5">
+          <ContactForm />
+
+          <Card>
+            <CardContent className="space-y-3 p-5">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ClockIcon className="size-[18px]" />
+              </span>
+              <h3 className="h-card text-[17px]">When we are reachable</h3>
+              <p className="text-sm text-muted-foreground">
+                Reports and service applications are taken online around the
+                clock, and the SLA clock does not pause for a weekend — a
+                twelve-hour target is twelve hours whenever it starts.
+              </p>
+              <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                <MapPinIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                Officers are assigned by ward, so the desk that answers is the
+                one covering the address on the report.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
