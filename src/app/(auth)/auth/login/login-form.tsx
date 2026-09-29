@@ -4,10 +4,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
+import { DemoLoginPanel } from "@/components/auth/demo-login-panel";
 import { GoogleButton } from "@/components/auth/google-button";
 import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { PasswordField, TextField } from "@/components/shared/form-fields";
@@ -16,6 +17,11 @@ import { FieldSeparator } from "@/components/ui/field";
 import { useLogin } from "@/hooks";
 import { toApiError } from "@/lib/api-error";
 import { saveChallenge } from "@/lib/challenge";
+import {
+  DEMO_ACCOUNTS,
+  DEMO_LOGINS_ENABLED,
+  type DemoRole,
+} from "@/lib/demo-accounts";
 import { getDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
@@ -37,6 +43,9 @@ export function LoginForm() {
     name: string;
     role: Exclude<Role, "CITIZEN">;
   } | null>(null);
+
+  /** Which demo button is mid-flight, so the others can grey out. */
+  const [pendingDemo, setPendingDemo] = useState<DemoRole | null>(null);
 
   const {
     register,
@@ -97,6 +106,65 @@ export function LoginForm() {
       }
     }
   });
+
+  /**
+   * One click, no typing. Only the citizen account signs in here — the panel
+   * sends officer and admin to the console, which owns those sessions.
+   */
+  const runDemo = useCallback(
+    async (role: DemoRole) => {
+      const account = DEMO_ACCOUNTS[role];
+      setPendingDemo(role);
+      try {
+        const result = await login.mutateAsync({
+          email: account.email,
+          password: account.password,
+          deviceToken: getDeviceToken(),
+        });
+
+        // The seeded demo accounts have 2FA off; if one is ever turned on, the
+        // challenge screen is still the right place to land rather than a toast.
+        if (result.twoFactorRequired) {
+          saveChallenge({
+            kind: "login",
+            challengeId: result.challengeId,
+            email: result.email,
+            expiresInSec: result.expiresInSec,
+          });
+          router.push(routes.auth.twoFactor);
+          return;
+        }
+
+        if (result.user.role !== "CITIZEN") {
+          setStaff({ name: result.user.name, role: result.user.role });
+          return;
+        }
+
+        await signIn(result);
+        toast.success(`Signed in as ${account.label}.`);
+        router.replace(next);
+      } catch (error) {
+        toast.error(toApiError(error).message);
+      } finally {
+        setPendingDemo(null);
+      }
+    },
+    [login, next, router, signIn],
+  );
+
+  /**
+   * Arriving from the console's own panel with `?demo=citizen`. The ref keeps
+   * a re-render from firing a second sign-in on top of the first.
+   */
+  const demoParam = searchParams.get("demo");
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current || !DEMO_LOGINS_ENABLED || demoParam !== "citizen") {
+      return;
+    }
+    autoRan.current = true;
+    void runDemo("citizen");
+  }, [demoParam, runDemo]);
 
   if (staff) {
     return (
@@ -171,6 +239,8 @@ export function LoginForm() {
       <FieldSeparator>or</FieldSeparator>
 
       <GoogleButton label="Sign in with Google" />
+
+      <DemoLoginPanel onDemo={runDemo} pending={pendingDemo} />
     </AuthCard>
   );
 }

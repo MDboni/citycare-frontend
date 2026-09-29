@@ -3,9 +3,9 @@
 import { ExternalLinkIcon, ShieldIcon } from "lucide-react";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
+import { STAFF_URL } from "@/lib/app-urls";
 import type { Role } from "@/types";
 
-const STAFF_URL = process.env.NEXT_PUBLIC_STAFF_URL ?? "http://localhost:3001";
 const STAFF_LOGIN = `${STAFF_URL}/login`;
 
 const LABEL: Record<Exclude<Role, "CITIZEN">, string> = {
