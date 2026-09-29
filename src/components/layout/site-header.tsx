@@ -28,6 +28,8 @@ const PUBLIC_NAV: NavItem[] = [
   { href: routes.track, label: "Track a complaint" },
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
+  { href: routes.about, label: "About" },
+  { href: routes.faq, label: "FAQ" },
 ];
 
 const CITIZEN_NAV: NavItem[] = [

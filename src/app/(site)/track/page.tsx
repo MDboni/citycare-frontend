@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { FormPageSkeleton } from "@/components/shared/loading";
 import { TrackView } from "./track-view";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function TrackPage() {
   return (
-    <Suspense fallback={<FullPageSpinner label="Loading tracker" />}>
+    <Suspense fallback={<FormPageSkeleton fields={2} />}>
       <TrackView />
     </Suspense>
   );

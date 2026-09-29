@@ -1,13 +1,21 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  Loader2Icon,
+  PlusIcon,
+  Trash2Icon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { SelectField } from "@/components/shared/form-fields";
 import { PageHeader } from "@/components/shared/page-header";
+import { type Step, Stepper } from "@/components/shared/stepper";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,13 +31,24 @@ import {
   createServiceRequestSchema,
 } from "@/validation";
 
+const STEPS: readonly Step[] = [
+  { id: "service", label: "Service", hint: "What you are applying for" },
+  { id: "details", label: "Details", hint: "What the counter will ask" },
+  { id: "review", label: "Review", hint: "Check, then submit" },
+] as const;
+
 /**
- * A service application.
+ * A service application, as a three-step wizard.
+ *
+ * It is split because the three things it asks for are unrelated: which
+ * service, what the counter needs to know, and a last look before anything is
+ * created. Putting them on one screen made the details rows look mandatory
+ * when they are not, and buried the fee under a field array.
  *
  * `details` is a free-form JSON object server-side, because it differs per
- * service. Rather than invent a schema per licence, the form collects labelled
- * key/value rows — which is honest about what the API actually stores, and does
- * not go stale when an admin adds a new service type.
+ * service. Rather than invent a schema per licence, step two collects labelled
+ * key/value rows — honest about what the API stores, and it does not go stale
+ * when an admin adds a new service type.
  */
 export function ApplyForm() {
   const router = useRouter();
@@ -38,12 +57,15 @@ export function ApplyForm() {
   const create = useCreateServiceRequest();
 
   const preselected = searchParams.get("type") ?? "";
+  const [step, setStep] = useState(0);
+  const isLast = step === STEPS.length - 1;
 
   const {
     control,
     register,
     handleSubmit,
     watch,
+    trigger,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateServiceRequestValues>({
@@ -57,6 +79,7 @@ export function ApplyForm() {
   });
 
   const selectedId = watch("serviceTypeId");
+  const detailRows = watch("details") ?? [];
   const selected = (serviceTypes.data ?? []).find(
     (service) => service.id === selectedId,
   );
@@ -69,7 +92,28 @@ export function ApplyForm() {
       hint: formatBdt(service.fee),
     }));
 
-  const onSubmit = handleSubmit(async (values) => {
+  /** Rows with a name on them — the only ones that will be sent. */
+  const filledRows = detailRows.filter((row) => row.key?.trim());
+
+  /**
+   * Each step validates only its own fields, so a missing service is caught
+   * on step one rather than at the end, and an empty details list does not
+   * block a service that needs none.
+   */
+  const next = async () => {
+    const ok =
+      step === 0 ? await trigger("serviceTypeId") : await trigger("details");
+    if (ok) setStep((current) => Math.min(current + 1, STEPS.length - 1));
+  };
+
+  const submit = handleSubmit(async (values) => {
+    // Enter on an input submits the form; on an earlier step that means
+    // "next", not "create the application".
+    if (!isLast) {
+      await next();
+      return;
+    }
+
     // Empty rows are dropped rather than sent as blank keys.
     const details = Object.fromEntries(
       (values.details ?? [])
@@ -91,6 +135,10 @@ export function ApplyForm() {
         setError(field as keyof CreateServiceRequestValues, { message });
       }
       if (!Object.keys(api.fieldErrors).length) toast.error(api.message);
+
+      // A rejected field lives on step one or two, so go back to where it is.
+      if (api.fieldErrors.serviceTypeId) setStep(0);
+      else if (api.fieldErrors.details) setStep(1);
     }
   });
 
@@ -101,123 +149,215 @@ export function ApplyForm() {
         description="The application is created first, then you pay the fee and attach documents. Nothing is charged until you choose to pay."
       />
 
+      <Stepper steps={STEPS} current={step} />
+
       <Card>
         <CardContent className="p-5 sm:p-6">
-          <form onSubmit={onSubmit} className="space-y-5" noValidate>
-            <SelectField
-              name="serviceTypeId"
-              label="Service"
-              placeholder={
-                serviceTypes.isPending ? "Loading…" : "Choose a service"
-              }
-              options={options}
-              required
-              control={control}
-              error={errors.serviceTypeId}
-            />
+          <form onSubmit={submit} className="space-y-5" noValidate>
+            {step === 0 && (
+              <div className="space-y-5">
+                <SelectField
+                  name="serviceTypeId"
+                  label="Service"
+                  placeholder={
+                    serviceTypes.isPending ? "Loading…" : "Choose a service"
+                  }
+                  options={options}
+                  required
+                  control={control}
+                  error={errors.serviceTypeId}
+                />
 
-            {selected && (
-              <Alert>
-                <AlertTitle>{selected.name}</AlertTitle>
-                <AlertDescription>
-                  The fee is {formatBdt(selected.fee)}. It is taken from the
-                  service record, never from this page, and it is payable after
-                  the application is created.
-                </AlertDescription>
-              </Alert>
+                {selected && (
+                  <Alert>
+                    <AlertTitle>{selected.name}</AlertTitle>
+                    <AlertDescription>
+                      The fee is {formatBdt(selected.fee)}. It is taken from the
+                      service record, never from this page, and it is payable
+                      after the application is created.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {step === 1 && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <FieldLabel>Application details</FieldLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Optional. Add whatever the service asks for — a trade name,
+                    a holding number, a plot reference.
+                  </p>
+                </div>
+
+                {fields.length > 0 && (
+                  <ul className="space-y-2">
+                    {fields.map((field, index) => (
+                      <li key={field.id} className="flex items-start gap-2">
+                        <div className="grid flex-1 gap-2 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <Input
+                              placeholder="Field name"
+                              aria-label={`Detail ${index + 1} name`}
+                              aria-invalid={Boolean(
+                                errors.details?.[index]?.key,
+                              )}
+                              {...register(`details.${index}.key` as const)}
+                            />
+                            <FieldError
+                              errors={
+                                errors.details?.[index]?.key
+                                  ? [errors.details[index].key]
+                                  : undefined
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Input
+                              placeholder="Value"
+                              aria-label={`Detail ${index + 1} value`}
+                              aria-invalid={Boolean(
+                                errors.details?.[index]?.value,
+                              )}
+                              {...register(`details.${index}.value` as const)}
+                            />
+                            <FieldError
+                              errors={
+                                errors.details?.[index]?.value
+                                  ? [errors.details[index].value]
+                                  : undefined
+                              }
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="mt-0.5"
+                          aria-label={`Remove detail ${index + 1}`}
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2Icon />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={fields.length >= 20}
+                  onClick={() => append({ key: "", value: "" })}
+                >
+                  <PlusIcon />
+                  Add a detail
+                </Button>
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <FieldLabel>Review</FieldLabel>
+                  <p className="text-sm text-muted-foreground">
+                    Creating the application does not charge anything. The fee
+                    is paid from the application page afterwards.
+                  </p>
+                </div>
+
+                <dl className="divide-y divide-border rounded-xl border border-border">
+                  <div className="flex items-baseline justify-between gap-4 p-4">
+                    <dt className="text-sm text-muted-foreground">Service</dt>
+                    <dd className="text-sm font-medium">
+                      {selected?.name ?? "Not chosen"}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4 p-4">
+                    <dt className="text-sm text-muted-foreground">Fee</dt>
+                    <dd className="text-sm font-medium">
+                      {selected ? formatBdt(selected.fee) : "—"}
+                    </dd>
+                  </div>
+                  <div className="space-y-2 p-4">
+                    <dt className="text-sm text-muted-foreground">Details</dt>
+                    <dd>
+                      {filledRows.length === 0 ? (
+                        <p className="text-sm">
+                          None —{" "}
+                          <button
+                            type="button"
+                            className="font-medium text-primary underline-offset-4 hover:underline"
+                            onClick={() => setStep(1)}
+                          >
+                            add some
+                          </button>
+                        </p>
+                      ) : (
+                        <ul className="space-y-1.5">
+                          {filledRows.map((row) => (
+                            <li
+                              key={row.key}
+                              className="flex items-baseline justify-between gap-4 text-sm"
+                            >
+                              <span className="text-muted-foreground">
+                                {row.key}
+                              </span>
+                              <span className="min-w-0 truncate font-medium">
+                                {row.value?.trim() || "—"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             )}
 
             <Separator />
 
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <FieldLabel>Application details</FieldLabel>
-                <p className="text-sm text-muted-foreground">
-                  Optional. Add whatever the service asks for — a trade name, a
-                  holding number, a plot reference.
-                </p>
-              </div>
-
-              {fields.length > 0 && (
-                <ul className="space-y-2">
-                  {fields.map((field, index) => (
-                    <li key={field.id} className="flex items-start gap-2">
-                      <div className="grid flex-1 gap-2 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <Input
-                            placeholder="Field name"
-                            aria-label={`Detail ${index + 1} name`}
-                            aria-invalid={Boolean(errors.details?.[index]?.key)}
-                            {...register(`details.${index}.key` as const)}
-                          />
-                          <FieldError
-                            errors={
-                              errors.details?.[index]?.key
-                                ? [errors.details[index].key]
-                                : undefined
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Input
-                            placeholder="Value"
-                            aria-label={`Detail ${index + 1} value`}
-                            aria-invalid={Boolean(
-                              errors.details?.[index]?.value,
-                            )}
-                            {...register(`details.${index}.value` as const)}
-                          />
-                          <FieldError
-                            errors={
-                              errors.details?.[index]?.value
-                                ? [errors.details[index].value]
-                                : undefined
-                            }
-                          />
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="mt-0.5"
-                        aria-label={`Remove detail ${index + 1}`}
-                        onClick={() => remove(index)}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              {step === 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  nativeButton={false}
+                  render={<Link href={routes.services.catalog} />}
+                >
+                  Back to services
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setStep((current) => current - 1)}
+                >
+                  <ArrowLeftIcon data-icon="inline-start" />
+                  Back
+                </Button>
               )}
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={fields.length >= 20}
-                onClick={() => append({ key: "", value: "" })}
-              >
-                <PlusIcon />
-                Add a detail
-              </Button>
-            </div>
-
-            <Separator />
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="ghost"
-                nativeButton={false}
-                render={<Link href={routes.services.catalog} />}
-              >
-                Back to services
-              </Button>
-              <Button type="submit" size="lg" disabled={isSubmitting}>
-                {isSubmitting && <Loader2Icon className="animate-spin" />}
-                Create application
-              </Button>
+              {isLast ? (
+                <Button type="submit" size="lg" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2Icon className="animate-spin" />}
+                  Create application
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => void next()}
+                  disabled={step === 0 && !selectedId}
+                >
+                  Continue
+                  <ArrowRightIcon data-icon="inline-end" />
+                </Button>
+              )}
             </div>
           </form>
         </CardContent>

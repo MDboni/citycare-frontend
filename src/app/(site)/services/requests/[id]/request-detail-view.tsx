@@ -13,7 +13,7 @@ import { DocumentList } from "@/components/services/document-list";
 import { CopyButton } from "@/components/shared/copy-button";
 import { ErrorState } from "@/components/shared/error-state";
 import { FilePicker } from "@/components/shared/file-picker";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { DetailPageSkeleton } from "@/components/shared/loading";
 import {
   PaymentStatusPill,
   ServiceRequestStatusPill,
@@ -48,7 +48,7 @@ export function RequestDetailView({ id }: { id: string }) {
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
-  if (isPending) return <FullPageSpinner label="Loading application" />;
+  if (isPending) return <DetailPageSkeleton />;
 
   if (isError) {
     return (

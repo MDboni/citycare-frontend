@@ -17,7 +17,7 @@ import { ComplaintComments } from "@/components/complaints/complaint-comments";
 import { StatusTimeline } from "@/components/complaints/status-timeline";
 import { CopyButton } from "@/components/shared/copy-button";
 import { ErrorState } from "@/components/shared/error-state";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { DetailPageSkeleton } from "@/components/shared/loading";
 import {
   ComplaintStatusPill,
   PriorityPill,
@@ -41,7 +41,7 @@ export function ComplaintDetailView({ id }: { id: string }) {
     refetch,
   } = useComplaint(id);
 
-  if (isPending) return <FullPageSpinner label="Loading complaint" />;
+  if (isPending) return <DetailPageSkeleton />;
 
   if (isError) {
     return (

@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { SelectField, TextField } from "@/components/shared/form-fields";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { FormPageSkeleton } from "@/components/shared/loading";
 import { RolePill, UserStatusPill } from "@/components/shared/status-pill";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -49,8 +49,7 @@ export function ProfileForm() {
     });
   }, [user, reset]);
 
-  if (isLoading || !user)
-    return <FullPageSpinner label="Loading your profile" />;
+  if (isLoading || !user) return <FormPageSkeleton fields={5} />;
 
   const onSubmit = handleSubmit(async (values) => {
     // The API rejects an empty patch, so only real changes are sent.

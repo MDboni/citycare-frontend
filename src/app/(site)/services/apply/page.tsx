@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { FormPageSkeleton } from "@/components/shared/loading";
 import { ApplyForm } from "./apply-form";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ApplyPage() {
   return (
-    <Suspense fallback={<FullPageSpinner label="Loading the form" />}>
+    <Suspense fallback={<FormPageSkeleton fields={6} />}>
       <ApplyForm />
     </Suspense>
   );

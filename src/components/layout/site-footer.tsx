@@ -27,6 +27,14 @@ const COLUMNS = [
       { href: routes.account.security, label: "Security" },
     ],
   },
+  {
+    title: "CityCare",
+    links: [
+      { href: routes.about, label: "About" },
+      { href: routes.faq, label: "FAQ" },
+      { href: routes.contact, label: "Contact" },
+    ],
+  },
 ] as const;
 
 export function SiteFooter() {

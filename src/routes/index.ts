@@ -6,6 +6,9 @@ export const routes = {
   home: "/",
   track: "/track",
   nearby: "/nearby",
+  about: "/about",
+  contact: "/contact",
+  faq: "/faq",
 
   auth: {
     login: "/auth/login",

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { ListPageSkeleton } from "@/components/shared/loading";
 import { ComplaintsView } from "./complaints-view";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ComplaintsPage() {
   return (
-    <Suspense fallback={<FullPageSpinner label="Loading your complaints" />}>
+    <Suspense fallback={<ListPageSkeleton rows={6} columns={4} />}>
       <ComplaintsView />
     </Suspense>
   );

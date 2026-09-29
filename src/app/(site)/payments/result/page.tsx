@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { FormPageSkeleton } from "@/components/shared/loading";
 import { PaymentResultView } from "./payment-result-view";
 
 export const metadata: Metadata = {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PaymentResultPage() {
   return (
-    <Suspense fallback={<FullPageSpinner label="Checking the payment" />}>
+    <Suspense fallback={<FormPageSkeleton fields={2} />}>
       <PaymentResultView />
     </Suspense>
   );

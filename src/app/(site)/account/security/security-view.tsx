@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { OtpForm } from "@/components/auth/otp-form";
 import { PasswordField } from "@/components/shared/form-fields";
-import { FullPageSpinner } from "@/components/shared/loading";
+import { FormPageSkeleton } from "@/components/shared/loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,7 +33,7 @@ import { type ChangePasswordValues, changePasswordSchema } from "@/validation";
 export function SecurityView() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading || !user) return <FullPageSpinner label="Loading security" />;
+  if (isLoading || !user) return <FormPageSkeleton fields={4} />;
 
   return (
     <>
