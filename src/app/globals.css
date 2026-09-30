@@ -1085,7 +1085,10 @@
     /* Twice the panel is exactly the screen, so the two halves show one gradient
        between them and the seam down the middle is not a seam. */
     background-size: 200% 100%;
-    will-change: translate;
+    /* No `will-change` here on purpose. These are four full-screen boxes, and
+       hinting all four would hold four screens of layer memory for the whole
+       two seconds — on the cheapest phone in the building, for a slide the
+       compositor promotes by itself the moment it starts. */
   }
   .cc-intro-panel[data-edge="left"] {
     left: 0;

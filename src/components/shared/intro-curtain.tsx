@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /**
@@ -31,11 +32,35 @@ const TOTAL_MS = 2490;
 /** Reaching for the page is a good enough reason to get out of the way. */
 const SKIP_ON = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
 
+/**
+ * The two full page loads that are not somebody opening the site.
+ *
+ * Both are a machine handing the browser back: the payment gateway with the
+ * result of a fee, and Google with the end of a sign-in. Whoever is watching
+ * that screen is waiting on an answer, and two and a half seconds of curtain
+ * between them and it is the animation getting in the way of the product.
+ */
+const NOT_AN_ARRIVAL = ["/payments/result", "/auth/callback"];
+
 export function IntroCurtain() {
+  const pathname = usePathname();
   const [done, setDone] = useState(false);
+  const skip = NOT_AN_ARRIVAL.some((route) => pathname.startsWith(route));
 
   useEffect(() => {
     if (done) return;
+
+    /*
+      Latched rather than checked on every render. The root layout survives
+      client-side navigation, so without this, walking off the payment result
+      page to any other route would flip `skip` back to false with `done` still
+      unset — and the curtain would come down in the middle of a session, which
+      is the one place it has no business being.
+    */
+    if (skip) {
+      setDone(true);
+      return;
+    }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setDone(true);
@@ -58,9 +83,9 @@ export function IntroCurtain() {
       window.clearTimeout(timer);
       for (const type of SKIP_ON) window.removeEventListener(type, finish);
     };
-  }, [done]);
+  }, [done, skip]);
 
-  if (done) return null;
+  if (done || skip) return null;
 
   return (
     <div
