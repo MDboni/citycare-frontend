@@ -13,6 +13,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TrackWidget } from "@/components/complaints/track-widget";
 import { CityBanner } from "@/components/home/city-banner";
+import { CityShowcase } from "@/components/home/city-showcase";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,6 +171,9 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ banner */}
+      <CityShowcase />
 
       {/* ---------------------------------------------------------- coverage */}
       <CityBanner />

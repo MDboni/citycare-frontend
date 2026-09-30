@@ -585,6 +585,40 @@
     animation: cc-radar 3.2s ease-out infinite;
   }
 
+  /* The banner's night city: data leaving a rooftop, and the whole mesh over
+     the skyline breathing. Both are translations in user units, so no
+     transform-box is needed — there is no box to resolve a percentage against. */
+  @keyframes cc-beam {
+    0% {
+      transform: translateY(14px);
+      opacity: 0;
+    }
+    18%,
+    72% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-26px);
+      opacity: 0;
+    }
+  }
+  .cc-beam {
+    animation: cc-beam 5s ease-in-out infinite;
+  }
+
+  @keyframes cc-mesh {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(-14px, 8px, 0);
+    }
+  }
+  .cc-mesh {
+    animation: cc-mesh 18s ease-in-out infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .cc-rise,
     .cc-fade,
@@ -594,6 +628,8 @@
     .cc-dash,
     .cc-twinkle,
     .cc-radar,
+    .cc-beam,
+    .cc-mesh,
     .cc-stagger > * {
       animation: none;
     }
