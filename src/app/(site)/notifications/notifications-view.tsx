@@ -40,6 +40,7 @@ export function NotificationsView() {
   return (
     <div className="page-shell page-shell-read space-y-6 py-8">
       <PageHeader
+        eyebrow="Your account"
         title="Notifications"
         description="Status changes on your complaints, payment outcomes and anything an officer sends you."
         actions={

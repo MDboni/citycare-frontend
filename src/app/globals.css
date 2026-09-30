@@ -266,6 +266,48 @@
     max-width: var(--shell-read);
   }
 
+  /* The first thing a keyboard lands on. Without it, reaching the page means
+     tabbing past a logo, eight nav links and a theme button on every single
+     navigation — which is what this site asked of anyone not using a mouse.
+     :focus rather than :focus-visible on purpose: nothing but a keyboard ever
+     reaches a link that is off-screen, so the distinction buys nothing and the
+     older behaviour is the safer one. */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed top-3 left-3 z-50 rounded-lg bg-popover px-4 py-2 text-sm font-medium text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-2 outline-ring outline-offset-2;
+  }
+
+  /* The small label above a section heading.
+     Uppercase, tracked out and led by a short rule, so it reads as a label for
+     what follows rather than a stranded first sentence. It is the one thing a
+     page of stacked h2s was missing: without it every section starts at the
+     same pitch and the page has no rhythm. */
+  .eyebrow {
+    @apply flex items-center gap-2.5 text-xs font-semibold tracking-[0.16em] text-primary uppercase;
+  }
+  .eyebrow::before {
+    content: "";
+    flex: none;
+    inline-size: 1.75rem;
+    block-size: 2px;
+    border-radius: calc(infinity * 1px);
+    background: linear-gradient(90deg, transparent, var(--primary));
+  }
+
+  /* A hairline that fades out rather than running the full width and stopping
+     dead. Used under the headings of the signed-in pages. */
+  .rule-fade {
+    border: 0;
+    block-size: 1px;
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--foreground) 16%, transparent),
+      transparent 72%
+    );
+  }
+
   /* A soft civic wash used behind hero and auth panels. */
   .surface-wash {
     background-image:

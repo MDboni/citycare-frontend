@@ -141,6 +141,7 @@ export function NewComplaintForm() {
   return (
     <div className="page-shell page-shell-read space-y-6 py-8">
       <PageHeader
+        eyebrow="Complaints"
         title="Report an issue"
         description="The more specific the location, the faster an officer can find it. You can add photos on the next step."
       />

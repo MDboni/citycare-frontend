@@ -32,6 +32,7 @@ export function ComplaintsView() {
   return (
     <div className="page-shell space-y-6 py-8">
       <PageHeader
+        eyebrow="Complaints"
         title="My complaints"
         description="Everything you have reported, newest first. Open one to comment, add a photo, or close it once the work is done."
         actions={

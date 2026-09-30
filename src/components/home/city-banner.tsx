@@ -115,6 +115,7 @@ export function CityBanner() {
     <section className="border-b border-border bg-card/40">
       <div className="page-shell py-20 lg:py-24">
         <div className="cc-reveal mx-auto max-w-2xl space-y-4 text-center">
+          <p className="eyebrow justify-center">Coverage</p>
           <h2 className="h-section-lg">Everything the city looks after</h2>
           <p className="lead text-muted-foreground">
             Four departments take reports, and the service counter is open for

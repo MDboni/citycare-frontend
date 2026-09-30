@@ -1,3 +1,4 @@
+import { PhoneIcon, ShieldCheckIcon } from "lucide-react";
 import Link from "next/link";
 import { LogoMark } from "@/components/shared/logo";
 import { routes } from "@/routes";
@@ -37,11 +38,20 @@ const COLUMNS = [
   },
 ] as const;
 
+/**
+ * The foot of every page.
+ *
+ * No call to action down here, deliberately: the home page already closes with
+ * one, and a second inside the footer would have sat directly underneath it.
+ * A footer's job is to be the place things are, and the one thing it adds is
+ * the line about 999 — the only sentence on this site that matters more than
+ * anything above it, and the wrong one to have to go looking for.
+ */
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border bg-card/40">
-      <div className="page-shell grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="space-y-3">
+      <div className="page-shell grid gap-10 py-12 lg:grid-cols-[1.5fr_repeat(4,1fr)] lg:gap-8 lg:py-14">
+        <div className="space-y-4">
           <div className="flex items-center gap-2.5">
             <LogoMark />
             <span className="font-heading text-base font-semibold tracking-tight">
@@ -52,6 +62,18 @@ export function SiteFooter() {
             Municipal complaints and civic services, with a tracking id for
             every report and an SLA clock that anyone can see.
           </p>
+
+          <p className="flex max-w-xs items-start gap-2.5 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-xs text-muted-foreground">
+            <PhoneIcon
+              className="mt-0.5 size-3.5 shrink-0 text-destructive"
+              aria-hidden
+            />
+            <span>
+              In an emergency call{" "}
+              <strong className="font-semibold text-foreground">999</strong>. A
+              ticket queue is not an emergency service.
+            </span>
+          </p>
         </div>
 
         {COLUMNS.map((column) => (
@@ -60,10 +82,10 @@ export function SiteFooter() {
             aria-label={column.title}
             className="space-y-3"
           >
-            <p className="text-xs font-semibold tracking-wide text-foreground uppercase">
+            <p className="text-xs font-semibold tracking-[0.14em] text-foreground uppercase">
               {column.title}
             </p>
-            <ul className="space-y-2">
+            <ul className="space-y-2.5">
               {column.links.map((link) => (
                 <li key={link.href}>
                   <Link
@@ -80,11 +102,12 @@ export function SiteFooter() {
       </div>
 
       <div className="border-t border-border">
-        <div className="page-shell flex flex-col gap-2 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-shell flex flex-col gap-3 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>
             &copy; {new Date().getFullYear()} CityCare. A civic service portal.
           </p>
-          <p>
+          <p className="flex items-center gap-1.5">
+            <ShieldCheckIcon className="size-3.5 shrink-0" aria-hidden />
             Payments are processed by SSLCommerz. CityCare never sees a card
             number.
           </p>

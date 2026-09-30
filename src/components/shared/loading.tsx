@@ -74,9 +74,13 @@ export function CardGridSkeleton({ count = 3 }: { count?: number }) {
 /** The title-and-description block every page opens with. */
 function PageHeaderSkeleton() {
   return (
-    <div className="space-y-2.5">
-      <Skeleton className="h-8 w-56" />
-      <Skeleton className="h-4 w-full max-w-md" />
+    <div className="space-y-5">
+      <div className="space-y-2.5">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-4 w-full max-w-md" />
+      </div>
+      <hr className="rule-fade" />
     </div>
   );
 }

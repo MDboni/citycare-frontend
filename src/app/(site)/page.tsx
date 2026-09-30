@@ -14,6 +14,7 @@ import Link from "next/link";
 import { TrackWidget } from "@/components/complaints/track-widget";
 import { CityBanner } from "@/components/home/city-banner";
 import { CityShowcase } from "@/components/home/city-showcase";
+import { CoverageStats } from "@/components/home/coverage-stats";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -172,6 +173,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ------------------------------------------------------------- proof */}
+      <CoverageStats />
+
       {/* ------------------------------------------------------------ banner */}
       <CityShowcase />
 
@@ -181,6 +185,7 @@ export default function HomePage() {
       {/* ----------------------------------------------------------- how it works */}
       <section className="page-shell py-20 lg:py-28">
         <div className="cc-reveal mx-auto max-w-2xl space-y-4 text-center">
+          <p className="eyebrow justify-center">How it works</p>
           <h2 className="h-section-lg">Three steps, start to finish</h2>
           <p className="lead text-muted-foreground">
             The same path whether it is a streetlight or a drainage collapse.
@@ -213,6 +218,7 @@ export default function HomePage() {
       <section className="border-y border-border bg-card/40">
         <div className="page-shell py-20 lg:py-28">
           <div className="cc-reveal max-w-2xl space-y-4">
+            <p className="eyebrow">What you get</p>
             <h2 className="h-section-lg">Built for the awkward parts</h2>
             <p className="lead text-muted-foreground">
               The bits that usually go missing between a complaint form and an
@@ -248,6 +254,7 @@ export default function HomePage() {
           </div>
           <CardContent className="flex flex-col items-start gap-8 p-8 sm:p-12 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl space-y-3">
+              <p className="eyebrow">Get started</p>
               <h2 className="h-section-lg">Start with one report</h2>
               <p className="lead text-muted-foreground">
                 Create an account and your complaints, applications and receipts

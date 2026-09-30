@@ -35,6 +35,7 @@ export function PaymentsView() {
   return (
     <div className="page-shell space-y-6 py-8">
       <PageHeader
+        eyebrow="Services"
         title="Payments"
         description="Every fee you have paid through CityCare, with its transaction id and receipt. A row still showing Pending has not been paid — open it from its status to finish. Card details are handled by SSLCommerz and never reach us."
       />

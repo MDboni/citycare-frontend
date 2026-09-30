@@ -204,6 +204,7 @@ export function ApplyForm() {
   return (
     <div className="page-shell page-shell-read space-y-6 py-8">
       <PageHeader
+        eyebrow="Services"
         title="Apply for a service"
         description="The application is created first, then you pay the fee and attach documents. Nothing is charged until you choose to pay."
       />

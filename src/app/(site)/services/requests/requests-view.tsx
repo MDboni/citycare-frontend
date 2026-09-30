@@ -44,6 +44,7 @@ export function RequestsView() {
   return (
     <div className="page-shell space-y-6 py-8">
       <PageHeader
+        eyebrow="Services"
         title="My applications"
         description="Every service you have applied for, with its fee status and reference number."
         actions={
