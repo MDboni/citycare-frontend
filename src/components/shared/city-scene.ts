@@ -51,20 +51,35 @@ export const groundTransform = (cos: number, sin: number) => {
 
 // --------------------------------------------------------------------- scene
 
-export type Tone = "primary" | "amber" | "teal";
+export type Tone = "primary" | "amber" | "teal" | "glass";
 
 export const FILL: Record<Tone, string> = {
   primary: "fill-primary",
   amber: "fill-chart-2",
   teal: "fill-chart-3",
+  glass: "fill-card",
+};
+
+/**
+ * Glazing is the card colour, which sits a shade away from the page: at the
+ * opacities the solid tones use, a windscreen would all but vanish. It is
+ * carried heavier so the cabin reads against the body under it.
+ */
+const SHADE_SCALE: Record<Tone, number> = {
+  primary: 1,
+  amber: 1,
+  teal: 1,
+  glass: 1.4,
 };
 
 export type Block = {
   /** Centre of the footprint, in plate coordinates (the disc is radius 1). */
   u: number;
   v: number;
-  /** Half the footprint, in the same coordinates. */
+  /** Half the footprint along the block's own u, in the same coordinates. */
   s: number;
+  /** Half the footprint across it. Defaults to `s`; a car is longer than wide. */
+  sv?: number;
   /** Height in user units — the one dimension the rotation never touches. */
   h: number;
   /**
@@ -81,11 +96,56 @@ export type Block = {
   rows?: number;
   marker?: { tone: "primary" | "amber"; gap: number };
   /**
-   * Vehicles keep their v (or u) and drive along the other axis, so the two
-   * roads have something moving on them. The number is a phase offset.
+   * Lifts the block off the ground. A car's cabin is the only thing that uses
+   * it: it is a second box standing on the roof of the first.
    */
-  drive?: { axis: "u" | "v"; phase: number };
+  lift?: number;
+  /**
+   * Vehicles keep their v (or u) — that fixed value is the lane — and drive
+   * along the other axis. `phase` spaces them out, `reverse` sends them the
+   * other way so the two lanes of a road are not a convoy.
+   */
+  drive?: { axis: "u" | "v"; phase: number; reverse?: boolean };
 };
+
+/**
+ * One car: a body with a cabin standing on it.
+ *
+ * Two boxes rather than one, because a single box at this size reads as a crate
+ * — the step from body to cabin is the whole silhouette of a car when it is
+ * twenty pixels long. Both share a centre, so the painter's sort (which is by
+ * ground depth) always hands them back in this order and the cabin lands on top
+ * of its own roof.
+ *
+ * `lane` is the offset from the road's centre line, so two cars can pass.
+ */
+const car = (
+  axis: "u" | "v",
+  lane: number,
+  phase: number,
+  tone: Tone,
+  reverse = false,
+): Block[] => {
+  const cross = 0.05 + lane;
+  const at = axis === "u" ? { u: 0, v: cross } : { u: cross, v: 0 };
+  const drive = { axis, phase, reverse };
+
+  // The long side runs along the road, so it swaps with the axis being driven.
+  const body = axis === "u" ? { s: 0.09, sv: 0.036 } : { s: 0.036, sv: 0.09 };
+  const cabin =
+    axis === "u" ? { s: 0.048, sv: 0.031 } : { s: 0.031, sv: 0.048 };
+
+  return [
+    { ...at, ...body, h: 8, yaw: 0, tone, drive },
+    { ...at, ...cabin, h: 5, lift: 8, yaw: 0, tone: "glass", drive },
+  ];
+};
+
+const CARS: Block[] = [
+  ...car("u", -0.038, 0, "amber"),
+  ...car("u", 0.038, 0.45, "primary", true),
+  ...car("v", 0.038, 0.7, "teal"),
+];
 
 export const BLOCKS: Block[] = [
   {
@@ -181,25 +241,7 @@ export const BLOCKS: Block[] = [
     cols: 2,
     rows: 2,
   },
-  // The traffic. Small enough that no window grid would read at this size.
-  {
-    u: 0,
-    v: 0.05,
-    s: 0.045,
-    h: 13,
-    yaw: 0,
-    tone: "amber",
-    drive: { axis: "u", phase: 0 },
-  },
-  {
-    u: 0.05,
-    v: 0,
-    s: 0.04,
-    h: 11,
-    yaw: 0,
-    tone: "teal",
-    drive: { axis: "v", phase: 0.55 },
-  },
+  ...CARS,
 ];
 
 /** Green patches, as [u, v, radius in plate units]. */
@@ -282,12 +324,14 @@ export const viewOf = (
   if (block.drive) {
     // Drives off one edge and comes back on the other, like traffic passing.
     const along = (((seconds / DRIVE_SECONDS + block.drive.phase) % 1) + 1) % 1;
-    const pos = along * 1.7 - 0.85;
+    const pos = block.drive.reverse ? 0.85 - along * 1.7 : along * 1.7 - 0.85;
     if (block.drive.axis === "u") u = pos;
     else v = pos;
   }
 
   const { s, h, yaw } = block;
+  const sv = block.sv ?? s;
+  const lift = block.lift ?? 0;
   const yawCos = Math.cos(yaw);
   const yawSin = Math.sin(yaw);
 
@@ -296,15 +340,18 @@ export const viewOf = (
   // centre, but this way the centre itself only moves with the table.
   const corners: Pt[] = (
     [
-      [-s, -s],
-      [s, -s],
-      [s, s],
-      [-s, s],
+      [-s, -sv],
+      [s, -sv],
+      [s, sv],
+      [-s, sv],
     ] as Pt[]
   ).map(([ox, oy]) => {
     const [lu, lv] = turn(ox, oy, yawCos, yawSin);
     const [ru2, rv2] = turn(u + lu, v + lv, cos, sin);
-    return project(ru2, rv2);
+    const [px, py] = project(ru2, rv2);
+    // Lifting the base is all a raised box needs: the walls, the roof and the
+    // window grid are all measured from these four corners.
+    return [px, py - lift] as Pt;
   });
 
   const [ru, rv] = turn(u, v, cos, sin);
@@ -332,7 +379,11 @@ export const viewOf = (
     const far = corners[(i + 1) % 4];
     walls.push({
       d: `M${near[0]},${near[1]} L${far[0]},${far[1]} L${far[0]},${far[1] - h} L${near[0]},${near[1] - h} Z`,
-      shade: 0.4 + 0.36 * (0.5 + 0.5 * Math.cos(psi - LIGHT)),
+      shade: Math.min(
+        0.96,
+        (0.4 + 0.36 * (0.5 + 0.5 * Math.cos(psi - LIGHT))) *
+          SHADE_SCALE[block.tone],
+      ),
     });
 
     const { cols = 0, rows = 0 } = block;
