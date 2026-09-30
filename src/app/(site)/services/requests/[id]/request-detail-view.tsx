@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ReceiptButton } from "@/components/payments/receipt-button";
 import { DocumentList } from "@/components/services/document-list";
 import { CopyButton } from "@/components/shared/copy-button";
 import { ErrorState } from "@/components/shared/error-state";
@@ -18,17 +19,12 @@ import {
   PaymentStatusPill,
   ServiceRequestStatusPill,
 } from "@/components/shared/status-pill";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  useInitiatePayment,
-  useServiceRequest,
-  useUploadServiceDocument,
-} from "@/hooks";
+import { useServiceRequest, useUploadServiceDocument } from "@/hooks";
 import { errorMessage } from "@/lib/api-error";
 import { DOCUMENT_MIME_TYPES, MAX_FILE_SIZE } from "@/lib/constants";
 import { formatBdt, formatDateTime } from "@/lib/format";
@@ -42,7 +38,6 @@ export function RequestDetailView({ id }: { id: string }) {
     error,
     refetch,
   } = useServiceRequest(id);
-  const initiate = useInitiatePayment();
   const upload = useUploadServiceDocument(id);
 
   const [label, setLabel] = useState("");
@@ -61,22 +56,6 @@ export function RequestDetailView({ id }: { id: string }) {
       </div>
     );
   }
-
-  /**
-   * Paying means leaving the site. The API returns a gateway URL and the browser
-   * follows it; CityCare never sees a card number, which is why there is no form
-   * here to fill in.
-   */
-  const pay = async () => {
-    try {
-      const { paymentUrl } = await initiate.mutateAsync({
-        serviceRequestId: request.id,
-      });
-      window.location.href = paymentUrl;
-    } catch (caught) {
-      toast.error(errorMessage(caught));
-    }
-  };
 
   const submitDocument = async () => {
     if (!file) {
@@ -130,29 +109,33 @@ export function RequestDetailView({ id }: { id: string }) {
       </div>
 
       {awaitingPayment && (
-        <Alert>
-          <CreditCardIcon />
-          <AlertTitle>The fee is outstanding</AlertTitle>
-          <AlertDescription>
-            <span>
-              {formatBdt(request.serviceType.fee)} is due before this
-              application is processed. You will be taken to SSLCommerz and back
-              again.
-            </span>
+        <Card className="cc-pop border-warning/35">
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning-foreground dark:text-warning">
+                <CreditCardIcon className="size-[18px]" aria-hidden />
+              </span>
+              <div className="space-y-1">
+                <h2 className="h-card text-[17px]">The fee is outstanding</h2>
+                <p className="text-sm text-muted-foreground">
+                  {formatBdt(request.serviceType.fee)} is due before this
+                  application is processed. The next screen shows exactly what
+                  is being charged before anything leaves your account.
+                </p>
+              </div>
+            </div>
+
             <Button
-              className="mt-2 w-fit"
-              disabled={initiate.isPending}
-              onClick={() => void pay()}
+              size="lg"
+              className="shrink-0"
+              nativeButton={false}
+              render={<Link href={routes.payments.checkout(request.id)} />}
             >
-              {initiate.isPending ? (
-                <Loader2Icon className="animate-spin" />
-              ) : (
-                <CreditCardIcon data-icon="inline-start" />
-              )}
+              <CreditCardIcon data-icon="inline-start" />
               Pay {formatBdt(request.serviceType.fee)}
             </Button>
-          </AlertDescription>
-        </Alert>
+          </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -282,6 +265,12 @@ export function RequestDetailView({ id }: { id: string }) {
                       {formatBdt(payment.amount)}
                     </span>
                     <PaymentStatusPill status={payment.status} />
+                    {payment.status === "SUCCESS" && (
+                      <ReceiptButton
+                        paymentId={payment.id}
+                        transactionId={payment.transactionId}
+                      />
+                    )}
                   </div>
                 </li>
               ))}

@@ -1,5 +1,5 @@
 import { ofetch } from "ofetch";
-import type { ApiMeta, ApiResponse } from "@/types";
+import type { ApiErrorBody, ApiMeta, ApiResponse } from "@/types";
 import { ApiError, toApiError } from "./api-error";
 import {
   clearSession,
@@ -90,6 +90,64 @@ const send = async <T>(
     headers,
     signal: options.signal,
   });
+};
+
+const sendBlob = (path: string, accessToken: string | null): Promise<Blob> =>
+  // The second type argument is ofetch's response kind; it defaults to "json",
+  // which would contradict the option below.
+  raw<Blob, "blob">(path, {
+    responseType: "blob",
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+  });
+
+/**
+ * A failed blob request carries its JSON body as a Blob, which `toApiError`
+ * cannot read — so it is turned back into text first. Without this a 409 with a
+ * perfectly good explanation would surface as "Something went wrong".
+ */
+const blobError = async (error: unknown): Promise<ApiError> => {
+  const response = (
+    error as { response?: { status?: number; _data?: unknown } }
+  )?.response;
+  const data = response?._data;
+
+  if (data instanceof Blob) {
+    try {
+      const body = JSON.parse(await data.text()) as ApiErrorBody;
+      return new ApiError(
+        response?.status ?? 500,
+        body.message ?? "Something went wrong",
+        body.errors ?? [],
+        body.requestId,
+      );
+    } catch {
+      // Not JSON after all — fall through to the generic mapping.
+    }
+  }
+
+  return toApiError(error);
+};
+
+/**
+ * For an endpoint that answers a file rather than an envelope.
+ *
+ * Separate from `apiRequest` because that one reaches into `.data`, which a PDF
+ * has none of. The 401-refresh-retry is the same, so a download never fails just
+ * because the access token expired while the page was open.
+ */
+export const apiBlob = async (path: string): Promise<Blob> => {
+  try {
+    return await sendBlob(path, getAccessToken());
+  } catch (error) {
+    if (!isAuthFailure(error)) throw await blobError(error);
+
+    try {
+      return await sendBlob(path, await runRefresh());
+    } catch (refreshError) {
+      clearSession();
+      throw toApiError(refreshError);
+    }
+  }
 };
 
 /**

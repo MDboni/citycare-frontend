@@ -35,6 +35,9 @@ export const routes = {
 
   payments: {
     list: "/payments",
+    /** The last CityCare screen before the gateway takes over. */
+    checkout: (serviceRequestId: string) =>
+      `/payments/checkout?request=${serviceRequestId}`,
     result: "/payments/result",
   },
 

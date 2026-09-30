@@ -87,7 +87,10 @@ export type PaymentListItem = {
   paidAt: string | null;
   createdAt: string;
   serviceRequest: {
+    id: string;
     referenceNo: string;
+    /** Lets the list tell "still owed" from "paid by a later attempt". */
+    status: ServiceRequestStatus;
     serviceType: { name: string };
   } | null;
 };

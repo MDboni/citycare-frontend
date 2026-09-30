@@ -52,9 +52,15 @@ export const useUploadServiceDocument = (id: string) => {
 export const useInitiatePayment = () =>
   useMutation({ mutationFn: paymentsApi.initiate });
 
-export const useMyPayments = (page = 1, limit = 10) =>
+/**
+ * `enabled` is there for the payment-result page, which is deliberately reachable
+ * without a session — it asks for the list only after a success, and only to find
+ * the payment whose receipt it is about to offer.
+ */
+export const useMyPayments = (page = 1, limit = 10, enabled = true) =>
   useQuery({
     queryKey: queryKeys.payments.mine(page, limit),
     queryFn: () => paymentsApi.listMine({ page, limit }),
     placeholderData: (previous) => previous,
+    enabled,
   });

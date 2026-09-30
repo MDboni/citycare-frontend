@@ -1,7 +1,8 @@
 "use client";
 
-import { WalletIcon } from "lucide-react";
+import { ArrowRightIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
+import { ReceiptButton } from "@/components/payments/receipt-button";
 import { CopyButton } from "@/components/shared/copy-button";
 import { DataPagination } from "@/components/shared/data-pagination";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -35,10 +36,10 @@ export function PaymentsView() {
     <div className="page-shell space-y-6 py-8">
       <PageHeader
         title="Payments"
-        description="Every fee you have paid through CityCare, with its transaction id. Card details are handled by SSLCommerz and never reach us."
+        description="Every fee you have paid through CityCare, with its transaction id and receipt. A row still showing Pending has not been paid — open it from its status to finish. Card details are handled by SSLCommerz and never reach us."
       />
 
-      {isPending && <TableSkeleton rows={5} columns={5} />}
+      {isPending && <TableSkeleton rows={5} columns={6} />}
 
       {isError && <ErrorState error={error} onRetry={() => void refetch()} />}
 
@@ -70,46 +71,88 @@ export function PaymentsView() {
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead className="w-40" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        {payment.serviceRequest?.serviceType.name ??
-                          "Service fee"}
-                        {payment.serviceRequest && (
-                          <span className="block font-mono text-xs text-muted-foreground">
-                            {payment.serviceRequest.referenceNo}
+                  {payments.map((payment) => {
+                    /*
+                      Only an attempt that is still pending ON a request that is
+                      still owed can be resumed. A pending row whose request was
+                      paid by a later attempt is history, not a bill.
+                    */
+                    const payable =
+                      payment.status === "PENDING" &&
+                      payment.serviceRequest?.status === "PENDING_PAYMENT"
+                        ? payment.serviceRequest
+                        : null;
+
+                    return (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">
+                          {payment.serviceRequest?.serviceType.name ??
+                            "Service fee"}
+                          {payment.serviceRequest && (
+                            <span className="block font-mono text-xs text-muted-foreground">
+                              {payment.serviceRequest.referenceNo}
+                            </span>
+                          )}
+                        </TableCell>
+
+                        <TableCell>
+                          <span className="flex items-center gap-1">
+                            <code className="font-mono text-xs">
+                              {payment.transactionId}
+                            </code>
+                            <CopyButton
+                              value={payment.transactionId}
+                              label="Transaction id copied"
+                            />
                           </span>
-                        )}
-                      </TableCell>
+                        </TableCell>
 
-                      <TableCell>
-                        <span className="flex items-center gap-1">
-                          <code className="font-mono text-xs">
-                            {payment.transactionId}
-                          </code>
-                          <CopyButton
-                            value={payment.transactionId}
-                            label="Transaction id copied"
-                          />
-                        </span>
-                      </TableCell>
+                        <TableCell className="text-right font-medium tabular-nums">
+                          {formatBdt(payment.amount)}
+                        </TableCell>
 
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatBdt(payment.amount)}
-                      </TableCell>
+                        <TableCell>
+                          {payable ? (
+                            <Link
+                              href={routes.payments.checkout(payable.id)}
+                              aria-label={`Pay the fee for ${payable.referenceNo}`}
+                              className="inline-flex items-center gap-1.5 rounded underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+                            >
+                              <PaymentStatusPill status={payment.status} />
+                              <span className="text-xs text-muted-foreground">
+                                Pay now
+                              </span>
+                              <ArrowRightIcon
+                                className="size-3.5 text-muted-foreground"
+                                aria-hidden
+                              />
+                            </Link>
+                          ) : (
+                            <PaymentStatusPill status={payment.status} />
+                          )}
+                        </TableCell>
 
-                      <TableCell>
-                        <PaymentStatusPill status={payment.status} />
-                      </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDateTime(payment.paidAt ?? payment.createdAt)}
+                        </TableCell>
 
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDateTime(payment.paidAt ?? payment.createdAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        <TableCell>
+                          {payment.status === "SUCCESS" && (
+                            <span className="flex justify-end">
+                              <ReceiptButton
+                                paymentId={payment.id}
+                                transactionId={payment.transactionId}
+                              />
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
