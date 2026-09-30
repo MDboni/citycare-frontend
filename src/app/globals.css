@@ -265,9 +265,19 @@
     text-wrap: pretty;
   }
 
-  /* The page frame every route shares: one gutter, one max width. */
+  /*
+     The page frame every route shares: one gutter, one max width.
+
+     The gutter keeps growing past `lg`, and that is the part that was missing.
+     The shell only starts to centre itself once the screen is wider than 96rem;
+     between 64rem and 96rem it IS the screen, so a fixed 2.5rem gutter left the
+     headline 40px from the glass on exactly the widths most laptops run at —
+     measured, a 1920 panel at 150% scaling reports 1280 CSS px and got the same
+     40px as a 1024 tablet. Zooming out fixed it, which is the tell: the reader
+     was buying gutter with their own eyesight.
+  */
   .page-shell {
-    @apply mx-auto w-full px-4 sm:px-6 lg:px-10;
+    @apply mx-auto w-full px-4 sm:px-6 lg:px-12 xl:px-16 2xl:px-20;
     max-width: var(--shell);
   }
 
