@@ -36,9 +36,14 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         <Logo />
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          {/*
+            Hidden under 360px. Measured, this row is 287px of the 288 a 320px
+            screen leaves after the gutters — one pixel of headroom is not
+            headroom, and the link is in the footer of every page anyway.
+          */}
           <Link
             href={routes.track}
-            className="rounded-lg px-2 py-1 text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="hidden rounded-lg px-2 py-1 text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 xs:inline-block"
           >
             Track a complaint
           </Link>

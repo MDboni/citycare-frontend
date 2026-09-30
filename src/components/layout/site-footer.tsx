@@ -50,7 +50,9 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border bg-card/40">
-      <div className="page-shell grid gap-10 py-12 lg:grid-cols-[1.5fr_repeat(4,1fr)] lg:gap-8 lg:py-14">
+      {/* Two columns from sm, five from lg. Without the sm step the four link
+          columns stacked into one tall strip on every tablet. */}
+      <div className="page-shell grid gap-10 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,1fr)] lg:gap-8 lg:py-14">
         <div className="space-y-4">
           <div className="flex items-center gap-2.5">
             <LogoMark />

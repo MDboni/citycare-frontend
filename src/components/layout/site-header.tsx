@@ -7,6 +7,7 @@ import {
   CircleQuestionMarkIcon,
   HouseIcon,
   InfoIcon,
+  LogInIcon,
   type LucideIcon,
   MailIcon,
   MapPinIcon,
@@ -15,6 +16,7 @@ import {
   PlusIcon,
   ScrollTextIcon,
   SearchIcon,
+  UserPlusIcon,
   WalletIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -247,10 +249,17 @@ export function SiteHeader() {
 
         h-16 rather than h-14: the links are a 36px target with a bar under them
         now, and 56px left the bar sitting on the header's own border.
+
+        The grid only starts at lg, which is also the only width the centred nav
+        exists at. Below that it is a plain flex row: logo hard left, controls
+        hard right, nothing in between. A three-column grid with its middle
+        column display:none still carries both of its gaps and still asks two
+        1fr tracks to agree on a split — all of which is machinery for centring
+        something that is not on the screen.
       */}
-      <div className="page-shell grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="page-shell flex h-16 items-center justify-between gap-2 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-3">
         {/* The wrapper keeps the logo link the size of the logo, not of the column. */}
-        <div className="flex min-w-0 items-center">
+        <div className="flex min-w-0 shrink items-center">
           <Logo />
         </div>
 
@@ -302,7 +311,7 @@ export function SiteHeader() {
           </DropdownMenu>
         </nav>
 
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-1.5">
           <ThemeToggle />
 
           {isLoading ? (
@@ -323,9 +332,17 @@ export function SiteHeader() {
             </>
           ) : (
             <>
+              {/*
+                Both of these used to sit here at every width, and the bar was
+                365px wide inside the 288px a 320px screen has — it overflowed
+                on every phone narrower than about 414px. They step in as the
+                room arrives, and until then they are the first two things in
+                the menu.
+              */}
               <Button
                 variant="ghost"
                 size="lg"
+                className="hidden sm:inline-flex"
                 nativeButton={false}
                 render={<Link href={routes.auth.login} />}
               >
@@ -333,7 +350,7 @@ export function SiteHeader() {
               </Button>
               <Button
                 size="lg"
-                className="cc-sheen"
+                className="cc-sheen hidden xs:inline-flex"
                 nativeButton={false}
                 render={<Link href={routes.auth.register} />}
               >
@@ -355,13 +372,39 @@ export function SiteHeader() {
             >
               <MenuIcon />
             </SheetTrigger>
-            <SheetContent side="right" className="w-72">
+            <SheetContent side="right" className="w-72 max-w-[85vw]">
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               {/* px-2, not the header's p-4: the rows carry their own 12px, and this
                   is what lines their icons up under the panel title. */}
               <nav aria-label="Mobile" className="flex flex-col gap-0.5 px-2">
+                {!isAuthenticated && (
+                  <>
+                    <Button
+                      size="lg"
+                      className="cc-sheen mb-2 justify-start"
+                      nativeButton={false}
+                      render={<Link href={routes.auth.register} />}
+                      onClick={() => setOpen(false)}
+                    >
+                      <UserPlusIcon data-icon="inline-start" />
+                      Get started
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="mb-2 justify-start"
+                      nativeButton={false}
+                      render={<Link href={routes.auth.login} />}
+                      onClick={() => setOpen(false)}
+                    >
+                      <LogInIcon data-icon="inline-start" />
+                      Sign in
+                    </Button>
+                    <Separator className="mb-2" />
+                  </>
+                )}
                 {isAuthenticated && (
                   <>
                     <Button
@@ -397,22 +440,6 @@ export function SiteHeader() {
                     onNavigate={() => setOpen(false)}
                   />
                 ))}
-
-                {!isAuthenticated && (
-                  <>
-                    <Separator className="my-2" />
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="justify-start"
-                      nativeButton={false}
-                      render={<Link href={routes.auth.login} />}
-                      onClick={() => setOpen(false)}
-                    >
-                      Sign in
-                    </Button>
-                  </>
-                )}
               </nav>
             </SheetContent>
           </Sheet>

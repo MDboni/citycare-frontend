@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { CustomCursor } from "@/components/shared/custom-cursor";
 import { Toaster } from "@/components/ui/sonner";
 import Providers from "@/providers";
 import "./globals.css";
@@ -76,6 +77,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Providers>
           {children}
           <Toaster position="top-right" richColors closeButton />
+          {/* Draws nothing at all unless the pointer is a mouse and the machine
+              has not asked for less motion; see the component. */}
+          <CustomCursor />
         </Providers>
       </body>
     </html>
