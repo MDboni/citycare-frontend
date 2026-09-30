@@ -30,16 +30,36 @@ import { UserMenu } from "./user-menu";
 
 type NavItem = { href: string; label: string };
 
+/**
+ * Home is spelled out even though the logo already goes there.
+ *
+ * The logo is a convention, not a label — plenty of people look for the word,
+ * and on a page deep in a signed-in flow it is the one link that says where the
+ * way out is.
+ */
+const HOME: NavItem = { href: routes.home, label: "Home" };
+
 const PUBLIC_NAV: NavItem[] = [
+  HOME,
   { href: routes.track, label: "Track a complaint" },
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
 ];
 
+/**
+ * Signed in, the bar shows the four things that are *yours* and pushes browsing
+ * into More. There is only so much middle: a centred nav has the width between
+ * the logo and the actions, and at 1024px seven items plus "Report an issue"
+ * does not fit in it — they would squeeze rather than wrap.
+ */
 const CITIZEN_NAV: NavItem[] = [
+  HOME,
   { href: routes.complaints.list, label: "My complaints" },
   { href: routes.services.requests, label: "My requests" },
   { href: routes.payments.list, label: "Payments" },
+];
+
+const BROWSE_NAV: NavItem[] = [
   { href: routes.services.catalog, label: "Services" },
   { href: routes.nearby, label: "Nearby" },
 ];
@@ -73,6 +93,8 @@ export function SiteHeader() {
   }, []);
 
   const nav = isAuthenticated ? CITIZEN_NAV : PUBLIC_NAV;
+  /** Whatever the bar could not hold, so nothing is only in one place. */
+  const more = isAuthenticated ? [...BROWSE_NAV, ...INFO_NAV] : INFO_NAV;
 
   return (
     <header
@@ -83,12 +105,27 @@ export function SiteHeader() {
           : "border-transparent",
       )}
     >
-      <div className="page-shell flex h-14 items-center gap-3">
-        <Logo />
+      {/*
+        Three columns rather than a flex row, and the two outer ones share the
+        leftover width equally (1fr each) so the nav lands on the centre of the
+        header rather than the centre of whatever the logo left behind. With
+        `justify-center` in a flex row it would drift sideways every time the
+        right-hand side changed width — one notification bell, a longer name, a
+        Sign in button instead of an avatar.
+
+        When the sides genuinely need more than their half, the track grows past
+        1fr and the nav slides off centre. That is the wanted failure: better
+        off-centre than sitting underneath the avatar.
+      */}
+      <div className="page-shell grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3">
+        {/* The wrapper keeps the logo link the size of the logo, not of the column. */}
+        <div className="flex min-w-0 items-center">
+          <Logo />
+        </div>
 
         <nav
           aria-label="Main"
-          className="ml-4 hidden items-center gap-1 lg:flex"
+          className="hidden min-w-0 items-center justify-center gap-1 lg:flex"
         >
           {nav.map((item) => (
             <Button
@@ -121,7 +158,7 @@ export function SiteHeader() {
                   size="sm"
                   className={cn(
                     "text-muted-foreground transition-colors",
-                    INFO_NAV.some((item) => isActive(pathname, item.href)) &&
+                    more.some((item) => isActive(pathname, item.href)) &&
                       "bg-muted text-foreground",
                   )}
                 />
@@ -130,8 +167,8 @@ export function SiteHeader() {
               More
               <ChevronDownIcon data-icon="inline-end" className="size-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-44">
-              {INFO_NAV.map((item) => (
+            <DropdownMenuContent align="center" className="w-44">
+              {more.map((item) => (
                 <DropdownMenuItem
                   key={item.href}
                   render={
@@ -150,7 +187,7 @@ export function SiteHeader() {
           </DropdownMenu>
         </nav>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="flex items-center justify-end gap-1.5">
           <ThemeToggle />
 
           {isLoading ? (
@@ -221,7 +258,7 @@ export function SiteHeader() {
                     <Separator className="mb-2" />
                   </>
                 )}
-                {[...nav, ...INFO_NAV].map((item) => (
+                {[...nav, ...more].map((item) => (
                   <Button
                     key={item.href}
                     variant="ghost"

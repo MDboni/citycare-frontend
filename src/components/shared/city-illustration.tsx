@@ -1,298 +1,371 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import {
+  AX,
+  AY,
+  BLOCKS,
+  band,
+  FILL,
+  groundTransform,
+  ORIGIN,
+  PARK,
+  project,
+  RIM,
+  RX,
+  RY,
+  TURN_SECONDS,
+  viewOf,
+} from "./city-scene";
+
 /**
- * The isometric city on the auth screens.
+ * The city block, on a turntable.
  *
  * Drawn rather than dropped in as a raster for two reasons: every fill is a
  * palette token, so it re-tones itself in dark mode instead of sitting on the
  * page as a lit rectangle, and it stays sharp at any panel width without
- * shipping a second asset. It carries no information the copy beside it does
- * not already say, so it is hidden from assistive tech.
+ * shipping a second asset. It carries no information the copy beside it does not
+ * already say, so it is hidden from assistive tech.
+ *
+ * The rotation is a real one, not a spinning picture: the scene is rebuilt every
+ * frame from plate coordinates turned by the current angle, so each block shows
+ * the faces that are actually pointing at you and is shaded by how far it has
+ * turned away from the light. Spinning the finished drawing instead — a CSS
+ * rotate on the svg — would tip the buildings over and hand you the back of the
+ * card twice per revolution.
+ *
+ * The ground is a disc rather than the square it used to be, because a disc is
+ * the one footprint a turntable does not change: a square would swing its
+ * corners out past the viewBox every 45°.
  */
+
+const FIRST_FRAME = BLOCKS.map((block, index) => viewOf(block, index, 0, 0));
 
 /**
- * Half of one ground-plate axis, in the 2:1 projection the whole scene uses.
- * Everything is positioned in plate coordinates — both axes run -1 to 1 — so a
- * building cannot accidentally be placed off the ground.
+ * Cropped to what the scene actually uses at any angle — measured over a full
+ * revolution, x runs 82..478 and y 39..441 — so the city fills the panel instead
+ * of floating in a field of margin.
  */
-const AX = 125;
-const AY = 62.5;
-const ORIGIN = { x: 280, y: 290 };
+const VIEW_BOX = "40 24 480 432";
 
-const plate = (u: number, v: number): [number, number] => [
-  ORIGIN.x + (u - v) * AX,
-  ORIGIN.y + (u + v) * AY,
-];
+// ----------------------------------------------------------------- component
 
-const poly = (...points: [number, number][]) =>
-  points.map(([x, y]) => `${x},${y}`).join(" ");
-
-type Tone = "primary" | "amber" | "teal";
-
-const TONES: Record<Tone, { top: string; right: string; left: string }> = {
-  primary: {
-    top: "fill-primary/90",
-    right: "fill-primary/70",
-    left: "fill-primary/50",
-  },
-  amber: {
-    top: "fill-chart-2/85",
-    right: "fill-chart-2/65",
-    left: "fill-chart-2/45",
-  },
-  teal: {
-    top: "fill-chart-3/85",
-    right: "fill-chart-3/65",
-    left: "fill-chart-3/45",
-  },
+type Nodes = {
+  group: SVGGElement | null;
+  walls: (SVGPathElement | null)[];
+  roof: SVGPathElement | null;
+  panes: SVGPathElement | null;
+  lit: SVGPathElement | null;
+  leader: SVGPathElement | null;
+  pin: SVGGElement | null;
 };
-
-type BuildingProps = {
-  /** Plate coordinates of the base centre. */
-  u: number;
-  v: number;
-  /** Half-width of the footprint, in user units. */
-  w: number;
-  h: number;
-  tone?: Tone;
-  cols?: number;
-  rows?: number;
-};
-
-function Building({
-  u,
-  v,
-  w,
-  h,
-  tone = "primary",
-  cols = 0,
-  rows = 0,
-}: BuildingProps) {
-  const [x, base] = plate(u, v);
-  const dep = w / 2;
-  const top = base - h;
-
-  const faces = TONES[tone];
-
-  /**
-   * A point on one of the two visible faces. `u` runs 0 at the near vertical
-   * edge to 1 at the far one, `off` is the drop from the roof line.
-   */
-  const at = (side: 1 | -1, along: number, off: number) =>
-    `${x + side * w * along},${top + dep * (1 - along) + off}`;
-
-  const pane = (side: 1 | -1, a0: number, a1: number, o0: number, o1: number) =>
-    `M${at(side, a0, o0)} L${at(side, a1, o0)} L${at(side, a1, o1)} L${at(side, a0, o1)} Z`;
-
-  const panes: string[] = [];
-  if (cols > 0 && rows > 0) {
-    const across = 0.74 / cols;
-    const down = (h - 22) / rows;
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const a0 = 0.13 + c * across + across * 0.22;
-        const a1 = 0.13 + (c + 1) * across - across * 0.22;
-        const o0 = 13 + r * down + down * 0.24;
-        const o1 = 13 + (r + 1) * down - down * 0.24;
-        panes.push(pane(1, a0, a1, o0, o1), pane(-1, a0, a1, o0, o1));
-      }
-    }
-  }
-
-  return (
-    <g>
-      <path
-        d={`M${x - w},${top} L${x},${top + dep} L${x},${base + dep} L${x - w},${base} Z`}
-        className={faces.left}
-      />
-      <path
-        d={`M${x + w},${top} L${x},${top + dep} L${x},${base + dep} L${x + w},${base} Z`}
-        className={faces.right}
-      />
-      <path
-        d={`M${x},${top - dep} L${x + w},${top} L${x},${top + dep} L${x - w},${top} Z`}
-        className={faces.top}
-      />
-      {panes.map((d) => (
-        <path key={d} d={d} className="fill-card/70" />
-      ))}
-    </g>
-  );
-}
-
-/** A report hovering over the block it came from, on its dotted leader. */
-function Marker({
-  u,
-  v,
-  roof,
-  gap = 30,
-  tone,
-  delay,
-}: {
-  u: number;
-  v: number;
-  /** The height of the block underneath, so the leader stops at its roof. */
-  roof: number;
-  /** Clear air between that roof and the pin's tip. */
-  gap?: number;
-  tone: "primary" | "amber";
-  delay: string;
-}) {
-  const [x, ground] = plate(u, v);
-  const tip = ground - roof - gap;
-  const head = tip - 26;
-  const body = tone === "amber" ? "fill-chart-2" : "fill-primary";
-  const line = tone === "amber" ? "stroke-chart-2/50" : "stroke-primary/50";
-
-  return (
-    <g>
-      {/* Only the length that shows: a leader drawn down to the ground
-          would be hidden behind the block for all but the last few pixels. */}
-      <path
-        d={`M${x},${tip + 5} L${x},${ground - roof - 2}`}
-        className={`cc-dash ${line}`}
-        strokeWidth={1.6}
-        strokeDasharray="2 6"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <g className="cc-float" style={{ animationDelay: delay }}>
-        <path
-          d={`M${x},${tip} C${x - 6},${tip - 11} ${x - 11},${tip - 16} ${x - 11},${head} A11 11 0 1 1 ${x + 11},${head} C${x + 11},${tip - 16} ${x + 6},${tip - 11} ${x},${tip} Z`}
-          className={body}
-        />
-        <circle cx={x} cy={head} r={4.4} className="fill-card" />
-      </g>
-    </g>
-  );
-}
-
-function Tree({ u, v }: { u: number; v: number }) {
-  const [x, y] = plate(u, v);
-  return (
-    <g>
-      <rect
-        x={x - 1.4}
-        y={y - 8}
-        width={2.8}
-        height={8}
-        className="fill-chart-5/55"
-      />
-      <circle cx={x} cy={y - 12} r={5.4} className="fill-chart-5/80" />
-    </g>
-  );
-}
 
 export function CityIllustration({ className }: { className?: string }) {
-  const [bottom] = [plate(1, 1)];
-  const [right] = [plate(1, -1)];
-  const [left] = [plate(-1, 1)];
+  const svgRef = useRef<SVGSVGElement>(null);
+  const groundRef = useRef<SVGGElement>(null);
+  const layerRef = useRef<SVGGElement>(null);
+  const nodes = useRef<Nodes[]>(
+    BLOCKS.map(() => ({
+      group: null,
+      walls: [null, null, null, null],
+      roof: null,
+      panes: null,
+      lit: null,
+      leader: null,
+      pin: null,
+    })),
+  );
+
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let raf = 0;
+    /** The last painting order, so the DOM is only reshuffled when it changes. */
+    let order = "";
+    /**
+     * Time is accumulated rather than read off the clock, so a city that was
+     * paused — scrolled past, or in a background tab — picks up where it stopped
+     * instead of snapping to wherever the angle would have been by now. Long
+     * gaps are clamped for the same reason.
+     */
+    let seconds = 0;
+    let last = 0;
+
+    const paint = (now: number) => {
+      seconds += Math.min(now - last, 100) / 1000;
+      last = now;
+      const angle = (seconds / TURN_SECONDS) * Math.PI * 2;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+
+      groundRef.current?.setAttribute("transform", groundTransform(cos, sin));
+
+      const views = BLOCKS.map((block, index) =>
+        viewOf(block, index, angle, seconds),
+      );
+
+      for (let i = 0; i < views.length; i++) {
+        const view = views[i];
+        const node = nodes.current[i];
+
+        for (let w = 0; w < 4; w++) {
+          const wall = node.walls[w];
+          if (!wall) continue;
+          wall.setAttribute("d", view.walls[w].d);
+          wall.setAttribute("fill-opacity", view.walls[w].shade.toFixed(3));
+        }
+        node.roof?.setAttribute("d", view.roof);
+        node.panes?.setAttribute("d", view.panes);
+        node.lit?.setAttribute("d", view.lit);
+        if (view.marker) {
+          node.leader?.setAttribute("d", view.marker.leader);
+          node.pin?.setAttribute("transform", view.marker.pin);
+        }
+      }
+
+      const sorted = views
+        .map((view, index) => ({ index, depth: view.depth }))
+        .sort((a, b) => a.depth - b.depth)
+        .map((entry) => entry.index);
+      const key = sorted.join(",");
+      if (key !== order) {
+        order = key;
+        const layer = layerRef.current;
+        if (layer) {
+          for (const index of sorted) {
+            const group = nodes.current[index].group;
+            if (group) layer.appendChild(group);
+          }
+        }
+      }
+
+      raf = requestAnimationFrame(paint);
+    };
+
+    const start = () => {
+      if (raf || still.matches) return;
+      last = performance.now();
+      raf = requestAnimationFrame(paint);
+    };
+    const stop = () => {
+      if (!raf) return;
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    /** Off-screen and hidden tabs cost nothing: a decoration is not worth a frame. */
+    const watcher = new IntersectionObserver(
+      ([entry]) => (entry.isIntersecting ? start() : stop()),
+      { rootMargin: "80px" },
+    );
+    watcher.observe(svg);
+
+    const onVisibility = () =>
+      document.visibilityState === "visible" ? start() : stop();
+    const onMotionPreference = () => (still.matches ? stop() : start());
+
+    document.addEventListener("visibilitychange", onVisibility);
+    still.addEventListener("change", onMotionPreference);
+
+    return () => {
+      stop();
+      watcher.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      still.removeEventListener("change", onMotionPreference);
+    };
+  }, []);
 
   return (
     <svg
-      viewBox="0 0 560 460"
+      ref={svgRef}
+      viewBox={VIEW_BOX}
       className={className}
       aria-hidden="true"
       focusable="false"
     >
-      <title>An isometric city block</title>
+      <title>An isometric city block on a slowly turning disc</title>
 
-      {/* The plate, given a little thickness so it reads as ground rather
-          than as a flat diamond painted on the background. */}
-      <polygon
-        points={poly(
-          [left[0], left[1]],
-          [bottom[0], bottom[1]],
-          [bottom[0], bottom[1] + 14],
-          [left[0], left[1] + 14],
-        )}
+      <defs>
+        <clipPath id="cc-city-disc">
+          <ellipse cx={ORIGIN.x} cy={ORIGIN.y} rx={RX} ry={RY} />
+        </clipPath>
+      </defs>
+
+      {/* A wash under the disc, so it reads as floating rather than pasted. */}
+      <ellipse
+        cx={ORIGIN.x}
+        cy={ORIGIN.y + RIM + 8}
+        rx={RX * 0.94}
+        ry={RY * 0.82}
+        className="fill-primary/10"
+      />
+
+      {/* The rim is simply the deck drawn again, lower down. */}
+      <ellipse
+        cx={ORIGIN.x}
+        cy={ORIGIN.y + RIM}
+        rx={RX}
+        ry={RY}
         className="fill-primary/25"
       />
-      <polygon
-        points={poly(
-          [right[0], right[1]],
-          [bottom[0], bottom[1]],
-          [bottom[0], bottom[1] + 14],
-          [right[0], right[1] + 14],
-        )}
-        className="fill-primary/20"
-      />
-      <polygon
-        points={poly(plate(-1, -1), plate(1, -1), plate(1, 1), plate(-1, 1))}
+      <ellipse
+        cx={ORIGIN.x}
+        cy={ORIGIN.y}
+        rx={RX}
+        ry={RY}
         className="fill-accent"
       />
 
-      {/* Two roads crossing. Buildings are placed clear of both bands. */}
-      <polygon
-        points={poly(
-          plate(-1, -0.05),
-          plate(1, -0.05),
-          plate(1, 0.15),
-          plate(-1, 0.15),
-        )}
-        className="fill-muted-foreground/20"
-      />
-      <polygon
-        points={poly(
-          plate(-0.05, -1),
-          plate(0.15, -1),
-          plate(0.15, 1),
-          plate(-0.05, 1),
-        )}
-        className="fill-muted-foreground/20"
+      {/* Everything flat rides one matrix; see groundTransform. */}
+      <g ref={groundRef} clipPath="url(#cc-city-disc)">
+        <g className="fill-muted-foreground/20">
+          <polygon points={band("u")} />
+          <polygon points={band("v")} />
+        </g>
+
+        {/* Planting, kept flat on purpose: anything with a trunk would lean
+            under the ground matrix, and a park from above is canopy anyway. */}
+        {PARK.map(([u, v, r]) => {
+          const [x, y] = project(u, v);
+          return (
+            <ellipse
+              key={`park-${u}-${v}`}
+              cx={x}
+              cy={y}
+              rx={Math.SQRT2 * r * AX}
+              ry={Math.SQRT2 * r * AY}
+              className="fill-chart-5/45"
+            />
+          );
+        })}
+
+        {/* A report landing, rippling out across the ward it came from. */}
+        {BLOCKS.filter((block) => block.marker).map((block) => {
+          const [x, y] = project(block.u, block.v);
+          return (
+            <ellipse
+              key={`ring-${block.u}-${block.v}`}
+              className={`cc-radar ${block.marker?.tone === "amber" ? "stroke-chart-2/60" : "stroke-primary/60"}`}
+              cx={x}
+              cy={y}
+              rx={Math.SQRT2 * 0.24 * AX}
+              ry={Math.SQRT2 * 0.24 * AY}
+              fill="none"
+              strokeWidth={2}
+              style={{ animationDelay: `${block.h % 3}s` }}
+            />
+          );
+        })}
+      </g>
+
+      {/* The edge, on top of the roads it crops. */}
+      <ellipse
+        cx={ORIGIN.x}
+        cy={ORIGIN.y}
+        rx={RX}
+        ry={RY}
+        className="cc-dash stroke-primary/35"
+        fill="none"
+        strokeWidth={1.6}
+        strokeDasharray="3 9"
+        strokeLinecap="round"
       />
 
-      <Tree u={-0.34} v={-0.12} />
-      <Tree u={-0.34} v={0.3} />
-      <Tree u={0.42} v={-0.12} />
-      <Tree u={-0.12} v={-0.34} />
-      <Tree u={0.3} v={-0.34} />
+      <g ref={layerRef}>
+        {BLOCKS.map((block, index) => {
+          const view = FIRST_FRAME[index];
+          const fill = FILL[block.tone];
 
-      {/* Back to front, so the near blocks occlude the far ones. */}
-      <Building u={-0.58} v={-0.52} w={30} h={142} cols={3} rows={7} />
-      <Building u={-0.88} v={-0.18} w={27} h={108} cols={3} rows={5} />
-      <Building
-        u={-0.18}
-        v={-0.88}
-        w={26}
-        h={98}
-        tone="amber"
-        cols={2}
-        rows={4}
-      />
-      <Building
-        u={0.42}
-        v={-0.78}
-        w={24}
-        h={66}
-        tone="teal"
-        cols={2}
-        rows={3}
-      />
-      <Building u={-0.78} v={0.42} w={25} h={58} cols={2} rows={3} />
-      <Building u={0.85} v={-0.3} w={22} h={36} cols={2} rows={2} />
-      <Building u={-0.3} v={0.85} w={24} h={40} cols={2} rows={2} />
-      <Building u={0.3} v={0.42} w={28} h={44} tone="amber" cols={2} rows={2} />
+          return (
+            <g
+              // biome-ignore lint/suspicious/noArrayIndexKey: the scene is a fixed list; the index IS the identity, and every node is held by ref for the animation frame.
+              key={index}
+              ref={(node) => {
+                nodes.current[index].group = node;
+              }}
+            >
+              {view.walls.map((wall, w) => (
+                <path
+                  // biome-ignore lint/suspicious/noArrayIndexKey: four walls, always in the same order.
+                  key={w}
+                  ref={(node) => {
+                    nodes.current[index].walls[w] = node;
+                  }}
+                  d={wall.d}
+                  className={fill}
+                  fillOpacity={wall.shade}
+                />
+              ))}
+              <path
+                ref={(node) => {
+                  nodes.current[index].roof = node;
+                }}
+                d={view.roof}
+                className={fill}
+                fillOpacity={0.95}
+              />
+              <path
+                ref={(node) => {
+                  nodes.current[index].panes = node;
+                }}
+                d={view.panes}
+                className="fill-card"
+                fillOpacity={0.72}
+              />
+              {/* The lights that are on. Twinkling is the cheapest way to say a
+                  city is inhabited: one path, one animation, no per-window work. */}
+              <path
+                ref={(node) => {
+                  nodes.current[index].lit = node;
+                }}
+                d={view.lit}
+                className="cc-twinkle fill-chart-2"
+                style={{ animationDelay: `${(index % 5) * 0.45}s` }}
+              />
 
-      {/* Two vehicles on the crossing roads. */}
-      <Building u={0.52} v={0.05} w={17} h={13} tone="amber" />
-      <Building u={0.05} v={-0.46} w={14} h={11} tone="teal" />
-
-      <Marker u={-0.58} v={-0.52} roof={142} tone="primary" delay="0s" />
-      <Marker
-        u={-0.18}
-        v={-0.88}
-        roof={98}
-        gap={28}
-        tone="amber"
-        delay="1.4s"
-      />
-      <Marker
-        u={-0.78}
-        v={0.42}
-        roof={58}
-        gap={26}
-        tone="primary"
-        delay="2.6s"
-      />
+              {block.marker && (
+                <>
+                  <path
+                    ref={(node) => {
+                      nodes.current[index].leader = node;
+                    }}
+                    d={view.marker?.leader}
+                    className={`cc-dash ${block.marker.tone === "amber" ? "stroke-chart-2/50" : "stroke-primary/50"}`}
+                    strokeWidth={1.6}
+                    strokeDasharray="2 6"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  <g
+                    ref={(node) => {
+                      nodes.current[index].pin = node;
+                    }}
+                    transform={view.marker?.pin}
+                  >
+                    {/* Drawn around its own tip, so the frame only moves it. */}
+                    <g
+                      className="cc-float"
+                      style={{ animationDelay: `${index * 0.7}s` }}
+                    >
+                      <path
+                        d="M0,0 C-6,-11 -11,-16 -11,-26 A11 11 0 1 1 11,-26 C11,-16 6,-11 0,0 Z"
+                        className={
+                          block.marker.tone === "amber"
+                            ? "fill-chart-2"
+                            : "fill-primary"
+                        }
+                      />
+                      <circle cx={0} cy={-26} r={4.4} className="fill-card" />
+                    </g>
+                  </g>
+                </>
+              )}
+            </g>
+          );
+        })}
+      </g>
     </svg>
   );
 }
