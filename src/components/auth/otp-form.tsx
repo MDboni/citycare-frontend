@@ -78,20 +78,26 @@ export function OtpForm({
           onChange={complete}
           disabled={isSubmitting}
           autoFocus
-          containerClassName="justify-center gap-2"
+          containerClassName="justify-center gap-1.5 xs:gap-2"
           aria-label="Six digit verification code"
           aria-invalid={Boolean(error)}
         >
+          {/*
+            Measured at 320px: the card leaves 256px inside its padding, and six
+            44px boxes with the dash between them want 296. So the boxes are 40px
+            until there is room for 44, and the dash — which is decoration, the
+            two groups are already a gap apart — waits for 360px.
+          */}
           <InputOTPGroup>
-            <InputOTPSlot index={0} className="size-11 text-base" />
-            <InputOTPSlot index={1} className="size-11 text-base" />
-            <InputOTPSlot index={2} className="size-11 text-base" />
+            <InputOTPSlot index={0} className="size-10 text-base sm:size-11" />
+            <InputOTPSlot index={1} className="size-10 text-base sm:size-11" />
+            <InputOTPSlot index={2} className="size-10 text-base sm:size-11" />
           </InputOTPGroup>
-          <InputOTPSeparator />
+          <InputOTPSeparator className="hidden xs:flex" />
           <InputOTPGroup>
-            <InputOTPSlot index={3} className="size-11 text-base" />
-            <InputOTPSlot index={4} className="size-11 text-base" />
-            <InputOTPSlot index={5} className="size-11 text-base" />
+            <InputOTPSlot index={3} className="size-10 text-base sm:size-11" />
+            <InputOTPSlot index={4} className="size-10 text-base sm:size-11" />
+            <InputOTPSlot index={5} className="size-10 text-base sm:size-11" />
           </InputOTPGroup>
         </InputOTP>
 

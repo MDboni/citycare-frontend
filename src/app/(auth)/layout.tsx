@@ -50,8 +50,18 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
 
-      <main className="page-shell flex flex-1 items-center py-8 sm:py-12">
-        <div className="mx-auto grid w-full max-w-5xl items-center gap-14 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
+      {/*
+        Centred by an auto margin rather than by `items-center`, and that is a
+        bug fix, not a preference. A centred flex item that is taller than the
+        line overflows it at BOTH ends, and there is nothing above the top of a
+        document to scroll to — so on a phone the signup card, which is about
+        900px tall against the 540px this row gets, had its title cut off above
+        the screen and unreachable. An auto margin in the cross axis centres the
+        card while there is room and resolves to zero once there is not, which
+        is the behaviour that was wanted in the first place.
+      */}
+      <main className="page-shell flex flex-1 items-start py-8 sm:py-12">
+        <div className="m-auto grid w-full max-w-5xl items-center gap-14 lg:grid-cols-[minmax(0,1fr)_25rem] lg:gap-16">
           <section className="cc-rise hidden lg:flex lg:flex-col lg:gap-7">
             <CityIllustration className="w-full max-w-[33rem]" />
 
@@ -80,7 +90,26 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
             </div>
           </section>
 
-          <div className="mx-auto w-full max-w-md lg:mx-0">{children}</div>
+          <div className="mx-auto w-full max-w-md space-y-7 lg:mx-0 lg:space-y-0">
+            {children}
+
+            {/*
+              What the panel says, for the screens the panel is not on. Three
+              lines and no illustration: the form is the reason anybody is here
+              and the brand does not get to push it further down the page.
+            */}
+            <ul className="cc-stagger space-y-2.5 px-1 lg:hidden">
+              {POINTS.map((point) => (
+                <li
+                  key={point.title}
+                  className="flex items-center gap-2.5 text-xs text-muted-foreground"
+                >
+                  <point.icon className="size-3.5 shrink-0 text-primary" />
+                  {point.title}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </main>
 

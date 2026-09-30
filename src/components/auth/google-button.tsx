@@ -2,6 +2,7 @@
 
 import { GoogleLogin } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useGoogleTokenLogin } from "@/hooks";
@@ -41,6 +42,38 @@ const GoogleIcon = () => (
   </svg>
 );
 
+/**
+ * Google renders its button into an iframe of exactly the number of pixels it is
+ * given, and it does not care what it is sitting in. Hard-coded at 360 it was
+ * 104px wider than the card on a 320px phone, which is a horizontal scrollbar on
+ * the whole document — so the width is measured instead. 400 is Google's own
+ * ceiling and 200 its floor, and between them the button is the width of the
+ * form above it.
+ */
+const GOOGLE_MIN = 200;
+const GOOGLE_MAX = 400;
+
+function useBoxWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const measure = () => setWidth(Math.floor(node.clientWidth));
+    measure();
+
+    // Rotating the phone and opening the keyboard both change this, and the
+    // iframe does not resize itself.
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, width] as const;
+}
+
 export function GoogleButton({
   label = "Continue with Google",
 }: {
@@ -50,6 +83,7 @@ export function GoogleButton({
   const router = useRouter();
   const { signIn } = useAuth();
   const googleLogin = useGoogleTokenLogin();
+  const [box, boxWidth] = useBoxWidth();
 
   if (!clientId) {
     return (
@@ -68,51 +102,61 @@ export function GoogleButton({
   }
 
   return (
-    <div className="flex justify-center [color-scheme:light]">
-      <GoogleLogin
-        text="continue_with"
-        width="360"
-        onError={() => toast.error("Google sign-in was cancelled.")}
-        onSuccess={async (response) => {
-          if (!response.credential) {
-            toast.error("Google did not return a credential. Try again.");
-            return;
-          }
-
-          try {
-            const result = await googleLogin.mutateAsync({
-              idToken: response.credential,
-            });
-
-            if (result.newUser) {
-              saveSignup({
-                email: result.email,
-                expiresInSec: result.expiresInSec,
-              });
-              toast.info("Confirm your email to finish creating the account.");
-              router.push(routes.auth.verifyOtp);
+    <div
+      ref={box}
+      // min-h so the card does not jump by 40px when the iframe lands, and
+      // overflow-hidden so a screen narrower than Google's 200px floor clips the
+      // button rather than stretching the page sideways.
+      className="flex min-h-10 w-full justify-center overflow-hidden [color-scheme:light]"
+    >
+      {boxWidth > 0 && (
+        <GoogleLogin
+          text="continue_with"
+          width={String(Math.min(GOOGLE_MAX, Math.max(GOOGLE_MIN, boxWidth)))}
+          onError={() => toast.error("Google sign-in was cancelled.")}
+          onSuccess={async (response) => {
+            if (!response.credential) {
+              toast.error("Google did not return a credential. Try again.");
               return;
             }
 
-            if (result.twoFactorRequired) {
-              saveChallenge({
-                kind: "google",
-                challengeId: result.challengeId,
-                email: result.email,
-                expiresInSec: result.expiresInSec,
+            try {
+              const result = await googleLogin.mutateAsync({
+                idToken: response.credential,
               });
-              router.push(routes.auth.twoFactor);
-              return;
-            }
 
-            await signIn(result);
-            toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-            router.push(routes.complaints.list);
-          } catch (error) {
-            toast.error(errorMessage(error));
-          }
-        }}
-      />
+              if (result.newUser) {
+                saveSignup({
+                  email: result.email,
+                  expiresInSec: result.expiresInSec,
+                });
+                toast.info(
+                  "Confirm your email to finish creating the account.",
+                );
+                router.push(routes.auth.verifyOtp);
+                return;
+              }
+
+              if (result.twoFactorRequired) {
+                saveChallenge({
+                  kind: "google",
+                  challengeId: result.challengeId,
+                  email: result.email,
+                  expiresInSec: result.expiresInSec,
+                });
+                router.push(routes.auth.twoFactor);
+                return;
+              }
+
+              await signIn(result);
+              toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
+              router.push(routes.complaints.list);
+            } catch (error) {
+              toast.error(errorMessage(error));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

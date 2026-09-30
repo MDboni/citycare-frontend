@@ -69,11 +69,19 @@ function InputOTPSlot({
   );
 }
 
-function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
+function InputOTPSeparator({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-otp-separator"
-      className="flex items-center [&_svg:not([class*='size-'])]:size-4"
+      // Merged rather than replaced: the spread used to overwrite this class
+      // outright, so passing a single class dropped the icon sizing with it.
+      className={cn(
+        "flex items-center [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
       role="separator"
       {...props}
     >

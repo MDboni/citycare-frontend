@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { CustomCursor } from "@/components/shared/custom-cursor";
+import { IntroCurtain } from "@/components/shared/intro-curtain";
 import { Toaster } from "@/components/ui/sonner";
 import Providers from "@/providers";
 import "./globals.css";
@@ -74,6 +75,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${jakarta.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* First in the document, and outside Providers because it needs
+            nothing from them: the curtain has to be in the opening bytes of the
+            page or it covers something that was already on screen. It is
+            `position: fixed`, so it takes no part in this flex column. */}
+        <IntroCurtain />
         <Providers>
           {children}
           <Toaster position="top-right" richColors closeButton />
