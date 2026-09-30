@@ -675,6 +675,22 @@
      not the percentages cc-drift uses: a percentage transform on an SVG group
      resolves against its own bounding box, so every marker would travel a
      different distance. */
+  /* A slow push into the picture while a slide is up — the thing that stops a
+     drawn city from reading as a still. It never finishes: the hold is shorter
+     than the animation, so the frame is always mid-move, and the class is only
+     on the slide that is showing, so arriving at a slide starts it over. */
+  @keyframes cc-zoom {
+    from {
+      transform: scale(1);
+    }
+    to {
+      transform: scale(1.11);
+    }
+  }
+  .cc-zoom {
+    animation: cc-zoom 11s var(--ease-out-soft) both;
+  }
+
   @keyframes cc-float {
     0%,
     100% {
@@ -779,6 +795,7 @@
     .cc-radar,
     .cc-beam,
     .cc-mesh,
+    .cc-zoom,
     .cc-stagger > * {
       animation: none;
     }

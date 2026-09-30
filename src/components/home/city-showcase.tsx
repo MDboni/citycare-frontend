@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { type Accent, NightCity } from "@/components/home/night-city";
+import { type Accent, CitySkyline } from "@/components/shared/city-skyline";
+import { useCarousel } from "@/components/shared/use-carousel";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/routes";
 
@@ -65,61 +65,13 @@ const HOLD_MS = 6500;
  * The banner carousel on the home page.
  *
  * Built rather than pulled in: a slider is a transform, a timer and a set of
- * controls, and the accessibility is the part a library gets wrong anyway.
- *
- * It keeps going. The first cut stopped for good the moment anybody touched a
- * dot — the polite reading of "do not fight the user", and the wrong one: one
- * press of an arrow and the banner was a still picture for the rest of the
- * visit. A manual move now only restarts the hold, so the slide you asked for
- * gets its full six and a half seconds and the rotation carries on after it.
- * What does stop it: the pointer resting on the frame, focus inside it, a
- * background tab, the pause button, or an operating system that asked for less
- * motion.
+ * controls, and the accessibility is the part a library gets wrong anyway. The
+ * timer and the rules around it are in `useCarousel`, which the contact panel
+ * shares — one behaviour, one place to fix it.
  */
 export function CityShowcase() {
-  const [index, setIndex] = useState(0);
-  /** Hovering, focus and background tabs: a circumstance, not a decision. */
-  const [paused, setPaused] = useState(false);
-  /** The pause button, which is a decision, and the only one that is announced. */
-  const [playing, setPlaying] = useState(true);
-  const [still, setStill] = useState(false);
-  const startX = useRef<number | null>(null);
-
-  const running = playing && !paused && !still;
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setStill(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    const onVisibility = () =>
-      setPaused(document.visibilityState !== "visible");
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, []);
-
-  /**
-   * A timeout keyed on the slide rather than one interval running underneath
-   * the whole thing: it re-arms on every change of index, so a slide arrived at
-   * by hand is held as long as one that came up on its own instead of being cut
-   * short by whatever was left of a tick.
-   */
-  useEffect(() => {
-    if (!running) return;
-    const timer = setTimeout(
-      () => setIndex((index + 1) % SLIDES.length),
-      HOLD_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [running, index]);
-
-  const go = useCallback((to: number) => {
-    setIndex((to + SLIDES.length) % SLIDES.length);
-  }, []);
+  const { index, go, running, still, playing, toggle, frameProps, swipeProps } =
+    useCarousel(SLIDES.length, HOLD_MS);
 
   return (
     <section className="page-shell py-16 lg:py-24">
@@ -138,31 +90,14 @@ export function CityShowcase() {
         aria-roledescription="carousel"
         aria-label="What CityCare does"
         className="cc-reveal relative overflow-hidden rounded-3xl border border-border shadow-lg"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocusCapture={() => setPaused(true)}
-        onBlurCapture={() => setPaused(false)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowRight") go(index + 1);
-          if (event.key === "ArrowLeft") go(index - 1);
-        }}
+        {...frameProps}
       >
         <div
           // touch-pan-y: a horizontal drag moves the carousel, a vertical one
           // still scrolls the page.
           className="flex touch-pan-y motion-safe:transition-transform motion-safe:duration-700 motion-safe:ease-out"
           style={{ transform: `translateX(-${index * 100}%)` }}
-          onPointerDown={(event) => {
-            startX.current = event.clientX;
-          }}
-          onPointerUp={(event) => {
-            const from = startX.current;
-            startX.current = null;
-            if (from === null) return;
-            const moved = event.clientX - from;
-            if (Math.abs(moved) < 44) return;
-            go(index + (moved < 0 ? 1 : -1));
-          }}
+          {...swipeProps}
         >
           {SLIDES.map((slide, position) => {
             const active = position === index;
@@ -189,7 +124,7 @@ export function CityShowcase() {
                     className="object-cover"
                   />
                 ) : (
-                  <NightCity
+                  <CitySkyline
                     id={`showcase-${slide.id}`}
                     accent={slide.accent}
                     seed={slide.seed}
@@ -251,7 +186,7 @@ export function CityShowcase() {
                   playing ? "Pause the slideshow" : "Play the slideshow"
                 }
                 className="border-white/30 bg-white/10 text-white hover:bg-white/20"
-                onClick={() => setPlaying((on) => !on)}
+                onClick={toggle}
               >
                 {playing ? <PauseIcon /> : <PlayIcon />}
               </Button>

@@ -34,14 +34,6 @@ export function TrackView() {
 
   return (
     <div className="page-shell space-y-6 py-10">
-      <div className="mx-auto max-w-2xl space-y-3 text-center">
-        <h1 className="h-section">Track a complaint</h1>
-        <p className="text-muted-foreground">
-          Anyone with the tracking id can see where a complaint stands. Names,
-          addresses and comments stay private.
-        </p>
-      </div>
-
       <Card className="mx-auto max-w-2xl">
         <CardContent className="p-5">
           <TrackWidget autoFocus={!raw} />

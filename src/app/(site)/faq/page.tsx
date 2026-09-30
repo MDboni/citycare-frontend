@@ -1,7 +1,13 @@
-import { ChevronDownIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  CircleQuestionMarkIcon,
+  LightbulbIcon,
+  WalletIcon,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PageBanner } from "@/components/shared/page-banner";
 import { Button } from "@/components/ui/button";
 import { formatBdt } from "@/lib/format";
 import { getCategories, getServiceTypes } from "@/lib/server-api";
@@ -171,68 +177,73 @@ export default async function FaqPage() {
   ]);
 
   return (
-    <div className="page-shell space-y-12 py-12 lg:py-16">
-      <header className="cc-rise max-w-3xl space-y-4">
-        <h1 className="h-section-lg">Frequently asked questions</h1>
-        <p className="lead text-muted-foreground">
-          The things people ask before they file their first report — what the
-          clock means, what upvotes do, and what happens to a fee once you have
-          paid it.
-        </p>
-      </header>
+    <div className="pb-16 lg:pb-20">
+      <PageBanner
+        seed={660218}
+        tone="dusk"
+        accent="violet"
+        chips={[CircleQuestionMarkIcon, LightbulbIcon, WalletIcon]}
+        title="Frequently asked questions"
+        lead="The things people ask before they file their first report — what the clock means, what upvotes do, and what happens to a fee once you have paid it."
+      />
 
-      <div className="space-y-12">
-        {SECTIONS.map((section) => (
-          <section key={section.heading} className="space-y-4">
-            <h2 className="h-section">{section.heading}</h2>
+      <div className="page-shell space-y-12 pt-12 lg:pt-16">
+        <div className="space-y-12">
+          {SECTIONS.map((section) => (
+            <section key={section.heading} className="space-y-4">
+              <h2 className="h-section">{section.heading}</h2>
 
-            <div className="divide-y divide-border rounded-xl border border-border">
-              {section.items.map((item) => (
-                /*
-                 * Native <details>, not a JS accordion: it opens without
-                 * hydration, it is keyboard and screen-reader correct out of
-                 * the box, and it keeps this page a Server Component.
-                 */
-                <details key={item.q} className="group px-5">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
-                    {item.q}
-                    <ChevronDownIcon
-                      className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
-                      aria-hidden
-                    />
-                  </summary>
-                  <p className="pb-4 text-sm text-muted-foreground">
-                    {typeof item.a === "symbol"
-                      ? dynamicAnswers.get(item.a)
-                      : item.a}
-                  </p>
-                </details>
-              ))}
-            </div>
-          </section>
-        ))}
+              <div className="divide-y divide-border rounded-xl border border-border">
+                {section.items.map((item) => (
+                  /*
+                   * Native <details>, not a JS accordion: it opens without
+                   * hydration, it is keyboard and screen-reader correct out of
+                   * the box, and it keeps this page a Server Component.
+                   */
+                  <details key={item.q} className="group px-5">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+                      {item.q}
+                      <ChevronDownIcon
+                        className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                        aria-hidden
+                      />
+                    </summary>
+                    <p className="pb-4 text-sm text-muted-foreground">
+                      {typeof item.a === "symbol"
+                        ? dynamicAnswers.get(item.a)
+                        : item.a}
+                    </p>
+                  </details>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/50 p-8">
+          <div className="min-w-0 flex-1 space-y-2">
+            <h2 className="h-card text-[17px]">Still stuck?</h2>
+            <p className="text-sm text-muted-foreground">
+              The department desks answer things this page does not.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              nativeButton={false}
+              render={<Link href={routes.contact} />}
+            >
+              Contact a department
+            </Button>
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={routes.track} />}
+            >
+              Track a complaint
+            </Button>
+          </div>
+        </section>
       </div>
-
-      <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card/50 p-8">
-        <div className="min-w-0 flex-1 space-y-2">
-          <h2 className="h-card text-[17px]">Still stuck?</h2>
-          <p className="text-sm text-muted-foreground">
-            The department desks answer things this page does not.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Button nativeButton={false} render={<Link href={routes.contact} />}>
-            Contact a department
-          </Button>
-          <Button
-            variant="outline"
-            nativeButton={false}
-            render={<Link href={routes.track} />}
-          >
-            Track a complaint
-          </Button>
-        </div>
-      </section>
     </div>
   );
 }

@@ -1,6 +1,11 @@
-import { GridPageSkeleton } from "@/components/shared/loading";
+import { BannerSkeleton, GridPageSkeleton } from "@/components/shared/loading";
 
-/** Route-level loading UI — nearby issues as cards. */
+/** Route-level loading UI — nearby issues as cards. Opens with the banner, as the page does. */
 export default function Loading() {
-  return <GridPageSkeleton count={6} />;
+  return (
+    <>
+      <BannerSkeleton />
+      <GridPageSkeleton count={6} />
+    </>
+  );
 }

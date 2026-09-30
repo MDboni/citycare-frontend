@@ -7,7 +7,6 @@ import { ComplaintCard } from "@/components/complaints/complaint-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { TableSkeleton } from "@/components/shared/loading";
-import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -74,35 +73,31 @@ export function NearbyView() {
 
   return (
     <div className="page-shell space-y-6 py-8">
-      <PageHeader
-        title="Issues near you"
-        description="Complaints reported around your location. If one of them is what you were about to report, upvote it instead — ten upvotes raises its priority."
-        actions={
-          coords ? (
-            <div className="flex items-center gap-2">
-              <Select
-                value={radiusKm}
-                onValueChange={(value) => setRadiusKm(String(value ?? "2"))}
-              >
-                <SelectTrigger size="sm" className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RADIUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="sm" onClick={locate}>
-                <LocateFixedIcon />
-                Update
-              </Button>
-            </div>
-          ) : null
-        }
-      />
+      {/* The heading is on the banner above; what is left here is the control
+          that belongs to the list rather than to the page. */}
+      {coords && (
+        <div className="cc-rise flex items-center justify-end gap-2">
+          <Select
+            value={radiusKm}
+            onValueChange={(value) => setRadiusKm(String(value ?? "2"))}
+          >
+            <SelectTrigger size="sm" className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RADIUS_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={locate}>
+            <LocateFixedIcon />
+            Update
+          </Button>
+        </div>
+      )}
 
       {!coords && (
         <Card className="mx-auto max-w-lg">

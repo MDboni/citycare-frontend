@@ -6,7 +6,6 @@ import { useState } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { CardGridSkeleton } from "@/components/shared/loading";
-import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,11 +31,6 @@ export function ServicesView() {
 
   return (
     <div className="page-shell space-y-6 py-8">
-      <PageHeader
-        title="Civic services"
-        description="Licences, certificates and permits you can apply for online. Pay the fee, upload the documents, and follow the file by its reference number."
-      />
-
       <div className="relative max-w-sm">
         <SearchIcon
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"

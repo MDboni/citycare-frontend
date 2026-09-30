@@ -142,6 +142,30 @@ export function GridPageSkeleton({ count = 6 }: { count?: number }) {
 }
 
 /**
+ * The picture band a public page opens with, held at its real height.
+ *
+ * Its own element rather than a row inside the shells: the banner is full
+ * bleed and the shells are inside the page gutter, so a skeleton drawn in
+ * there would be the wrong width as well as the wrong shape.
+ */
+export function BannerSkeleton() {
+  return (
+    <div
+      className="border-b border-border bg-muted/40 px-4 py-14 sm:px-6 lg:px-10 lg:py-20"
+      aria-hidden
+    >
+      <div className="mx-auto max-w-(--shell) space-y-4">
+        <Skeleton className="h-10 w-3/4 max-w-xl" />
+        <div className="max-w-2xl space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * A prose page that reads something before it renders — a heading, a lead
  * paragraph and a couple of rows of cards beneath it.
  *
