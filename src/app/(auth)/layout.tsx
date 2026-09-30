@@ -32,7 +32,7 @@ const POINTS = [
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="surface-wash flex min-h-dvh flex-col">
-      <header className="page-shell flex h-14 shrink-0 items-center justify-between">
+      <header className="page-shell flex h-16 shrink-0 items-center justify-between">
         <Logo />
         <div className="flex items-center gap-2">
           <ThemeToggle />

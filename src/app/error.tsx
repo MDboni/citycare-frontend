@@ -27,7 +27,7 @@ export default function GlobalError({
 
   return (
     <div className="surface-wash flex min-h-dvh flex-col">
-      <header className="page-shell flex h-14 items-center">
+      <header className="page-shell flex h-16 items-center">
         <Logo />
       </header>
 

@@ -1,10 +1,25 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronDownIcon, MenuIcon, PlusIcon } from "lucide-react";
+import {
+  BriefcaseIcon,
+  ChevronDownIcon,
+  CircleQuestionMarkIcon,
+  HouseIcon,
+  InfoIcon,
+  type LucideIcon,
+  MailIcon,
+  MapPinIcon,
+  MegaphoneIcon,
+  MenuIcon,
+  PlusIcon,
+  ScrollTextIcon,
+  SearchIcon,
+  WalletIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -28,7 +43,23 @@ import { routes } from "@/routes";
 import { NotificationBell } from "./notification-bell";
 import { UserMenu } from "./user-menu";
 
-type NavItem = { href: string; label: string };
+/**
+ * A place in the app, and the hue it lights up in.
+ *
+ * The hue is only ever decoration — it rides on hover, on the icon in the sheet
+ * and on the bar under the current link, and every one of those states is also
+ * carried by `aria-current` or by a shape. Nothing here is said in colour alone.
+ * The mixing and the contrast that goes with it live in `.cc-nav-link`.
+ */
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  tint: string;
+};
+
+const tintOf = (item: Pick<NavItem, "tint">) =>
+  ({ "--cc-nav": item.tint }) as CSSProperties;
 
 /**
  * Home is spelled out even though the logo already goes there.
@@ -37,13 +68,38 @@ type NavItem = { href: string; label: string };
  * and on a page deep in a signed-in flow it is the one link that says where the
  * way out is.
  */
-const HOME: NavItem = { href: routes.home, label: "Home" };
+const HOME: NavItem = {
+  href: routes.home,
+  label: "Home",
+  icon: HouseIcon,
+  tint: "var(--primary)",
+};
+
+/** The two that move between the bar and More depending on who is looking. */
+const SERVICES: NavItem = {
+  href: routes.services.catalog,
+  label: "Services",
+  icon: BriefcaseIcon,
+  tint: "var(--chart-3)",
+};
+
+const NEARBY: NavItem = {
+  href: routes.nearby,
+  label: "Nearby",
+  icon: MapPinIcon,
+  tint: "var(--chart-5)",
+};
 
 const PUBLIC_NAV: NavItem[] = [
   HOME,
-  { href: routes.track, label: "Track a complaint" },
-  { href: routes.services.catalog, label: "Services" },
-  { href: routes.nearby, label: "Nearby" },
+  {
+    href: routes.track,
+    label: "Track a complaint",
+    icon: SearchIcon,
+    tint: "var(--chart-4)",
+  },
+  SERVICES,
+  NEARBY,
 ];
 
 /**
@@ -54,25 +110,96 @@ const PUBLIC_NAV: NavItem[] = [
  */
 const CITIZEN_NAV: NavItem[] = [
   HOME,
-  { href: routes.complaints.list, label: "My complaints" },
-  { href: routes.services.requests, label: "My requests" },
-  { href: routes.payments.list, label: "Payments" },
+  {
+    href: routes.complaints.list,
+    label: "My complaints",
+    icon: MegaphoneIcon,
+    tint: "var(--chart-4)",
+  },
+  {
+    href: routes.services.requests,
+    label: "My requests",
+    icon: ScrollTextIcon,
+    tint: "var(--chart-3)",
+  },
+  {
+    href: routes.payments.list,
+    label: "Payments",
+    icon: WalletIcon,
+    tint: "var(--chart-2)",
+  },
 ];
 
-const BROWSE_NAV: NavItem[] = [
-  { href: routes.services.catalog, label: "Services" },
-  { href: routes.nearby, label: "Nearby" },
-];
+const BROWSE_NAV: NavItem[] = [SERVICES, NEARBY];
 
 /** The pages you read once. Same three whether or not you are signed in. */
 const INFO_NAV: NavItem[] = [
-  { href: routes.about, label: "About" },
-  { href: routes.faq, label: "FAQ" },
-  { href: routes.contact, label: "Contact" },
+  {
+    href: routes.about,
+    label: "About",
+    icon: InfoIcon,
+    tint: "var(--chart-1)",
+  },
+  {
+    href: routes.faq,
+    label: "FAQ",
+    icon: CircleQuestionMarkIcon,
+    tint: "var(--chart-4)",
+  },
+  {
+    href: routes.contact,
+    label: "Contact",
+    icon: MailIcon,
+    tint: "var(--chart-5)",
+  },
 ];
 
 const isActive = (pathname: string, href: string) =>
   pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+
+/**
+ * A link in the centred bar.
+ *
+ * A plain anchor, not a ghost `Button`: this is a link, and rendering one
+ * through the button primitive hands it `role="button"` — which tells a screen
+ * reader it does something to this page rather than going to another one.
+ */
+function NavLink({ item, current }: { item: NavItem; current: boolean }) {
+  return (
+    <Link
+      href={item.href}
+      className="cc-nav-link"
+      style={tintOf(item)}
+      aria-current={current ? "page" : undefined}
+    >
+      {item.label}
+    </Link>
+  );
+}
+
+/** The same link, full width, for the sheet and its 44px thumb target. */
+function NavRow({
+  item,
+  current,
+  onNavigate,
+}: {
+  item: NavItem;
+  current: boolean;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      className="cc-nav-row"
+      style={tintOf(item)}
+      aria-current={current ? "page" : undefined}
+      onClick={onNavigate}
+    >
+      <item.icon className="size-4" />
+      {item.label}
+    </Link>
+  );
+}
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -95,6 +222,7 @@ export function SiteHeader() {
   const nav = isAuthenticated ? CITIZEN_NAV : PUBLIC_NAV;
   /** Whatever the bar could not hold, so nothing is only in one place. */
   const more = isAuthenticated ? [...BROWSE_NAV, ...INFO_NAV] : INFO_NAV;
+  const moreIsCurrent = more.some((item) => isActive(pathname, item.href));
 
   return (
     <header
@@ -116,8 +244,11 @@ export function SiteHeader() {
         When the sides genuinely need more than their half, the track grows past
         1fr and the nav slides off centre. That is the wanted failure: better
         off-centre than sitting underneath the avatar.
+
+        h-16 rather than h-14: the links are a 36px target with a bar under them
+        now, and 56px left the bar sitting on the header's own border.
       */}
-      <div className="page-shell grid h-14 grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="page-shell grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-3">
         {/* The wrapper keeps the logo link the size of the logo, not of the column. */}
         <div className="flex min-w-0 items-center">
           <Logo />
@@ -128,49 +259,29 @@ export function SiteHeader() {
           className="hidden min-w-0 items-center justify-center gap-1 lg:flex"
         >
           {nav.map((item) => (
-            <Button
+            <NavLink
               key={item.href}
-              variant="ghost"
-              size="sm"
-              nativeButton={false}
-              className={cn(
-                "text-muted-foreground transition-colors",
-                isActive(pathname, item.href) && "bg-muted text-foreground",
-              )}
-              render={
-                <Link
-                  href={item.href}
-                  aria-current={
-                    isActive(pathname, item.href) ? "page" : undefined
-                  }
-                />
-              }
-            >
-              {item.label}
-            </Button>
+              item={item}
+              current={isActive(pathname, item.href)}
+            />
           ))}
 
           <DropdownMenu>
+            {/* Not a Button: the trigger wears the same pill as its neighbours,
+                and the primitive already gives it the button semantics it needs. */}
             <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "text-muted-foreground transition-colors",
-                    more.some((item) => isActive(pathname, item.href)) &&
-                      "bg-muted text-foreground",
-                  )}
-                />
-              }
+              className="cc-nav-link"
+              style={tintOf({ tint: "var(--chart-1)" })}
+              data-current={moreIsCurrent || undefined}
             >
               More
-              <ChevronDownIcon data-icon="inline-end" className="size-3.5" />
+              <ChevronDownIcon className="size-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-44">
+            <DropdownMenuContent align="center" className="w-52 p-1.5">
               {more.map((item) => (
                 <DropdownMenuItem
                   key={item.href}
+                  className="h-9 gap-2.5 px-2"
                   render={
                     <Link
                       href={item.href}
@@ -180,6 +291,10 @@ export function SiteHeader() {
                     />
                   }
                 >
+                  {/* The hue is set on the element, not in a class: the menu
+                      recolours everything inside a highlighted row, and an
+                      inline colour is the one thing that survives it. */}
+                  <item.icon style={{ color: item.tint }} />
                   {item.label}
                 </DropdownMenuItem>
               ))}
@@ -195,8 +310,8 @@ export function SiteHeader() {
           ) : isAuthenticated ? (
             <>
               <Button
-                size="sm"
-                className="hidden sm:inline-flex"
+                size="lg"
+                className="cc-sheen hidden sm:inline-flex"
                 nativeButton={false}
                 render={<Link href={routes.complaints.new} />}
               >
@@ -210,14 +325,15 @@ export function SiteHeader() {
             <>
               <Button
                 variant="ghost"
-                size="sm"
+                size="lg"
                 nativeButton={false}
                 render={<Link href={routes.auth.login} />}
               >
                 Sign in
               </Button>
               <Button
-                size="sm"
+                size="lg"
+                className="cc-sheen"
                 nativeButton={false}
                 render={<Link href={routes.auth.register} />}
               >
@@ -243,11 +359,14 @@ export function SiteHeader() {
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
-              <nav aria-label="Mobile" className="flex flex-col gap-1 px-4">
+              {/* px-2, not the header's p-4: the rows carry their own 12px, and this
+                  is what lines their icons up under the panel title. */}
+              <nav aria-label="Mobile" className="flex flex-col gap-0.5 px-2">
                 {isAuthenticated && (
                   <>
                     <Button
-                      className="mb-2 justify-start"
+                      size="lg"
+                      className="cc-sheen mb-2 justify-start"
                       nativeButton={false}
                       render={<Link href={routes.complaints.new} />}
                       onClick={() => setOpen(false)}
@@ -258,27 +377,33 @@ export function SiteHeader() {
                     <Separator className="mb-2" />
                   </>
                 )}
-                {[...nav, ...more].map((item) => (
-                  <Button
+                {nav.map((item) => (
+                  <NavRow
                     key={item.href}
-                    variant="ghost"
-                    className={cn(
-                      "justify-start text-muted-foreground",
-                      isActive(pathname, item.href) &&
-                        "bg-muted text-foreground",
-                    )}
-                    nativeButton={false}
-                    render={<Link href={item.href} />}
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.label}
-                  </Button>
+                    item={item}
+                    current={isActive(pathname, item.href)}
+                    onNavigate={() => setOpen(false)}
+                  />
                 ))}
+
+                {/* The overflow, kept visibly apart from the four that matter
+                    rather than run on from them. */}
+                <Separator className="my-2" />
+                {more.map((item) => (
+                  <NavRow
+                    key={item.href}
+                    item={item}
+                    current={isActive(pathname, item.href)}
+                    onNavigate={() => setOpen(false)}
+                  />
+                ))}
+
                 {!isAuthenticated && (
                   <>
                     <Separator className="my-2" />
                     <Button
                       variant="outline"
+                      size="lg"
                       className="justify-start"
                       nativeButton={false}
                       render={<Link href={routes.auth.login} />}

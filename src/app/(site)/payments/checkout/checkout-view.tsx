@@ -300,7 +300,7 @@ function Checkout({ request }: { request: ServiceRequest }) {
         </div>
 
         {/* ------------------------------------------------------ the payment */}
-        {/* top-20 clears the sticky h-14 header with a little air under it. */}
+        {/* top-20 clears the sticky h-16 header with a little air under it. */}
         <aside className="cc-pop lg:sticky lg:top-20">
           <Card className="border-primary/25">
             <CardContent className="space-y-5 p-5">

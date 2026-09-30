@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PauseIcon,
+  PlayIcon,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -60,18 +65,27 @@ const HOLD_MS = 6500;
  * The banner carousel on the home page.
  *
  * Built rather than pulled in: a slider is a transform, a timer and a set of
- * controls, and the accessibility is the part a library gets wrong anyway. What
- * it has to get right is that it never traps anyone — it stops on hover, on
- * focus and in a background tab, it stops for good on any manual move, and it
- * never runs at all for someone who asked for less motion.
+ * controls, and the accessibility is the part a library gets wrong anyway.
+ *
+ * It keeps going. The first cut stopped for good the moment anybody touched a
+ * dot — the polite reading of "do not fight the user", and the wrong one: one
+ * press of an arrow and the banner was a still picture for the rest of the
+ * visit. A manual move now only restarts the hold, so the slide you asked for
+ * gets its full six and a half seconds and the rotation carries on after it.
+ * What does stop it: the pointer resting on the frame, focus inside it, a
+ * background tab, the pause button, or an operating system that asked for less
+ * motion.
  */
 export function CityShowcase() {
   const [index, setIndex] = useState(0);
+  /** Hovering, focus and background tabs: a circumstance, not a decision. */
   const [paused, setPaused] = useState(false);
-  /** Set once somebody takes the wheel; autoplay does not come back. */
-  const [taken, setTaken] = useState(false);
+  /** The pause button, which is a decision, and the only one that is announced. */
+  const [playing, setPlaying] = useState(true);
   const [still, setStill] = useState(false);
   const startX = useRef<number | null>(null);
+
+  const running = playing && !paused && !still;
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -88,35 +102,51 @@ export function CityShowcase() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
+  /**
+   * A timeout keyed on the slide rather than one interval running underneath
+   * the whole thing: it re-arms on every change of index, so a slide arrived at
+   * by hand is held as long as one that came up on its own instead of being cut
+   * short by whatever was left of a tick.
+   */
   useEffect(() => {
-    if (paused || taken || still) return;
-    const timer = setInterval(
-      () => setIndex((current) => (current + 1) % SLIDES.length),
+    if (!running) return;
+    const timer = setTimeout(
+      () => setIndex((index + 1) % SLIDES.length),
       HOLD_MS,
     );
-    return () => clearInterval(timer);
-  }, [paused, taken, still]);
+    return () => clearTimeout(timer);
+  }, [running, index]);
 
   const go = useCallback((to: number) => {
-    setTaken(true);
     setIndex((to + SLIDES.length) % SLIDES.length);
   }, []);
 
   return (
-    <section
-      className="page-shell py-16 lg:py-24"
-      aria-roledescription="carousel"
-      aria-label="What CityCare does"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocusCapture={() => setPaused(true)}
-      onBlurCapture={() => setPaused(false)}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowRight") go(index + 1);
-        if (event.key === "ArrowLeft") go(index - 1);
-      }}
-    >
-      <div className="cc-reveal relative overflow-hidden rounded-3xl border border-border shadow-lg">
+    <section className="page-shell py-16 lg:py-24">
+      {/*
+        The carousel is the frame, not the section around it. It used to be the
+        section, which carries 4rem of padding above and below — so a pointer
+        resting in that empty band stopped the rotation from a place nobody
+        would read as being on the banner, and the banner looked broken.
+
+        biome-ignore lint/a11y/useSemanticElements: a carousel container is
+        role="group" with aria-roledescription (WAI-ARIA APG). The suggested
+        <fieldset> groups form controls, which this is not.
+      */}
+      <div
+        role="group"
+        aria-roledescription="carousel"
+        aria-label="What CityCare does"
+        className="cc-reveal relative overflow-hidden rounded-3xl border border-border shadow-lg"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocusCapture={() => setPaused(true)}
+        onBlurCapture={() => setPaused(false)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowRight") go(index + 1);
+          if (event.key === "ArrowLeft") go(index - 1);
+        }}
+      >
         <div
           // touch-pan-y: a horizontal drag moves the carousel, a vertical one
           // still scrolls the page.
@@ -211,6 +241,21 @@ export function CityShowcase() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* The mechanism WCAG asks for by name. Hidden when the rotation is
+                not running anyway, which is what reduced motion means here. */}
+            {!still && (
+              <Button
+                variant="outline"
+                size="icon-sm"
+                aria-label={
+                  playing ? "Pause the slideshow" : "Play the slideshow"
+                }
+                className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+                onClick={() => setPlaying((on) => !on)}
+              >
+                {playing ? <PauseIcon /> : <PlayIcon />}
+              </Button>
+            )}
             <Button
               variant="outline"
               size="icon-sm"
@@ -235,7 +280,7 @@ export function CityShowcase() {
 
       {/* Announced only once the carousel has stopped moving on its own —
           narrating an autoplay to a screen reader is just noise. */}
-      <p className="sr-only" aria-live={taken || paused ? "polite" : "off"}>
+      <p className="sr-only" aria-live={running ? "off" : "polite"}>
         Slide {index + 1} of {SLIDES.length}: {SLIDES[index].title}
       </p>
     </section>
