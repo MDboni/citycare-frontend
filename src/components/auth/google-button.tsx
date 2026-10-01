@@ -9,6 +9,7 @@ import { useGoogleTokenLogin } from "@/hooks";
 import { BASE_URL } from "@/lib/api-client";
 import { errorMessage } from "@/lib/api-error";
 import { saveChallenge, saveSignup } from "@/lib/challenge";
+import { leaveAuthScreen } from "@/lib/navigate";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
 
@@ -185,7 +186,7 @@ export function GoogleButton({
                 toast.success(
                   `Welcome back, ${result.user.name.split(" ")[0]}.`,
                 );
-                router.push(routes.complaints.list);
+                leaveAuthScreen(routes.complaints.list);
               } catch (error) {
                 toast.error(errorMessage(error));
               }

@@ -2,7 +2,7 @@
 
 import { MailIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { useResendSignupOtp, useVerifySignupOtp } from "@/hooks";
 import { errorMessage } from "@/lib/api-error";
 import { clearSignup, getSignup, saveSignup } from "@/lib/challenge";
+import { leaveAuthScreen } from "@/lib/navigate";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
 
 export function VerifySignupOtpForm() {
-  const router = useRouter();
   const { signIn } = useAuth();
   const verify = useVerifySignupOtp();
   const resend = useResendSignupOtp();
@@ -78,7 +78,7 @@ export function VerifySignupOtpForm() {
       clearSignup();
       await signIn(tokens);
       toast.success("Account created. Welcome to CityCare.");
-      router.replace(routes.complaints.list);
+      leaveAuthScreen(routes.complaints.list);
     } catch (caught) {
       setError(errorMessage(caught));
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+
 import {
   createContext,
   type ReactNode,
@@ -14,6 +14,7 @@ import {
 import { authApi, usersApi } from "@/api";
 import { queryKeys } from "@/hooks/query-keys";
 import { ApiError } from "@/lib/api-error";
+import { leaveAuthScreen } from "@/lib/navigate";
 import {
   clearSession,
   getAccessToken,
@@ -40,7 +41,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   /**
    * Whether the browser has taken over.
@@ -101,9 +101,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       }
       clearSession();
       queryClient.clear();
-      router.replace(routes.auth.login);
+      // The same cache problem as signing in, pointing the other way: whatever
+      // the Router Cache holds was rendered for a session that no longer
+      // exists. A full load is the only way to be sure none of it is still on
+      // screen.
+      leaveAuthScreen(routes.auth.login);
     },
-    [queryClient, router],
+    [queryClient],
   );
 
   const value = useMemo<AuthContextValue>(

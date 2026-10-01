@@ -22,6 +22,7 @@ import {
   DEMO_LOGINS_ENABLED,
   type DemoRole,
 } from "@/lib/demo-accounts";
+import { leaveAuthScreen } from "@/lib/navigate";
 import { getDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
@@ -89,7 +90,7 @@ export function LoginForm() {
 
       await signIn(result);
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-      router.replace(next);
+      leaveAuthScreen(next);
     } catch (error) {
       const api = toApiError(error);
 
@@ -142,7 +143,7 @@ export function LoginForm() {
 
         await signIn(result);
         toast.success(`Signed in as ${account.label}.`);
-        router.replace(next);
+        leaveAuthScreen(next);
       } catch (error) {
         toast.error(toApiError(error).message);
       } finally {

@@ -19,6 +19,7 @@ import {
   type PendingChallenge,
   saveChallenge,
 } from "@/lib/challenge";
+import { leaveAuthScreen } from "@/lib/navigate";
 import { saveDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
@@ -95,7 +96,7 @@ export function TwoFactorForm() {
       await signIn(result);
 
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-      router.replace(routes.complaints.list);
+      leaveAuthScreen(routes.complaints.list);
     } catch (caught) {
       setError(errorMessage(caught));
     }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { saveChallenge, saveSignup } from "@/lib/challenge";
+import { leaveAuthScreen } from "@/lib/navigate";
 import { saveSession } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
@@ -48,7 +49,7 @@ export function CallbackHandler() {
       saveSession({ accessToken, refreshToken });
       void refresh();
       toast.success("Signed in with Google.");
-      router.replace(routes.complaints.list);
+      leaveAuthScreen(routes.complaints.list);
       return;
     }
 
