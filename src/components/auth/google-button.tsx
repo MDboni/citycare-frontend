@@ -49,9 +49,18 @@ const GoogleIcon = () => (
  * the whole document — so the width is measured instead. 400 is Google's own
  * ceiling and 200 its floor, and between them the button is the width of the
  * form above it.
+ *
+ * `width` is the width of the button Google draws, not of the iframe it draws it
+ * in: the iframe comes back about 20px wider. Asking for the full measured width
+ * therefore produced a 388px iframe inside a 368px box, and the box clipped it —
+ * which costs more than the rounded corners it visibly ate. A clipped region
+ * takes no clicks, so the outer 10px of each side of the button was dead, and on
+ * the taller "Continue as <name>" variant the dead strip is far bigger. Leave
+ * Google the margin it is going to take.
  */
 const GOOGLE_MIN = 200;
 const GOOGLE_MAX = 400;
+const GOOGLE_IFRAME_MARGIN = 20;
 
 function useBoxWidth() {
   const ref = useRef<HTMLDivElement>(null);
@@ -105,14 +114,23 @@ export function GoogleButton({
     <div
       ref={box}
       // min-h so the card does not jump by 40px when the iframe lands, and
-      // overflow-hidden so a screen narrower than Google's 200px floor clips the
-      // button rather than stretching the page sideways.
-      className="flex min-h-10 w-full justify-center overflow-hidden [color-scheme:light]"
+      // overflow-x-clip so a screen narrower than Google's 200px floor clips the
+      // button rather than stretching the page sideways. Clipping the x axis
+      // only, and with `clip` rather than `hidden`, is what keeps the y axis
+      // genuinely visible: `overflow-x: hidden` would quietly turn `overflow-y`
+      // into `auto` and cut off any button taller than this box — which the
+      // personalised "Continue as <name>" button is.
+      className="flex min-h-10 w-full justify-center overflow-x-clip [color-scheme:light]"
     >
       {boxWidth > 0 && (
         <GoogleLogin
           text="continue_with"
-          width={String(Math.min(GOOGLE_MAX, Math.max(GOOGLE_MIN, boxWidth)))}
+          width={String(
+            Math.min(
+              GOOGLE_MAX,
+              Math.max(GOOGLE_MIN, boxWidth - GOOGLE_IFRAME_MARGIN),
+            ),
+          )}
           onError={() => toast.error("Google sign-in was cancelled.")}
           onSuccess={async (response) => {
             if (!response.credential) {
