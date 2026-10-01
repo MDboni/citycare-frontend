@@ -33,7 +33,9 @@ const csp = [
   "default-src 'self'",
   // accounts.google.com serves the Google Identity client the sign-in button loads.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://accounts.google.com`,
-  "style-src 'self' 'unsafe-inline'",
+  // Google Identity pulls a stylesheet of its own from the same origin as its
+  // script, and without it the sign-in button renders unstyled.
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com",
   // next/font/google self-hosts at build time, so no external font origin.
   "font-src 'self' data:",
   "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com",
