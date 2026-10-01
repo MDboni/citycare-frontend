@@ -111,70 +111,102 @@ export function GoogleButton({
   }
 
   return (
-    <div
-      ref={box}
-      // min-h so the card does not jump by 40px when the iframe lands, and
-      // overflow-x-clip so a screen narrower than Google's 200px floor clips the
-      // button rather than stretching the page sideways. Clipping the x axis
-      // only, and with `clip` rather than `hidden`, is what keeps the y axis
-      // genuinely visible: `overflow-x: hidden` would quietly turn `overflow-y`
-      // into `auto` and cut off any button taller than this box — which the
-      // personalised "Continue as <name>" button is.
-      className="flex min-h-10 w-full justify-center overflow-x-clip [color-scheme:light]"
-    >
-      {boxWidth > 0 && (
-        <GoogleLogin
-          text="continue_with"
-          width={String(
-            Math.min(
-              GOOGLE_MAX,
-              Math.max(GOOGLE_MIN, boxWidth - GOOGLE_IFRAME_MARGIN),
-            ),
-          )}
-          onError={() => toast.error("Google sign-in was cancelled.")}
-          onSuccess={async (response) => {
-            if (!response.credential) {
-              toast.error("Google did not return a credential. Try again.");
-              return;
-            }
+    <div className="w-full">
+      <div
+        ref={box}
+        // min-h so the card does not jump by 40px when the iframe lands, and
+        // overflow-x-clip so a screen narrower than Google's 200px floor clips the
+        // button rather than stretching the page sideways. Clipping the x axis
+        // only, and with `clip` rather than `hidden`, is what keeps the y axis
+        // genuinely visible: `overflow-x: hidden` would quietly turn `overflow-y`
+        // into `auto` and cut off any button taller than this box — which the
+        // personalised "Continue as <name>" button is.
+        className="flex min-h-10 w-full justify-center overflow-x-clip [color-scheme:light]"
+      >
+        {boxWidth > 0 && (
+          <GoogleLogin
+            text="continue_with"
+            /**
+             * Both of these default to false in the library, and false is the old
+             * world. Without `use_fedcm_for_button` the button reads the Google
+             * session the pre-FedCM way, which needs a third-party cookie on
+             * accounts.google.com — and a browser that no longer hands those out
+             * does not produce an error anyone can see. The click simply issues
+             * no credential, `onSuccess` never fires, `onError` never fires, and
+             * the only trace is the two `gsi/log` beacons Google sends itself.
+             * Turning it on asks the browser to mediate instead, which is the
+             * supported path and needs no third-party cookie at all.
+             * `itp_support` is the same bargain for Safari's tracking prevention.
+             */
+            use_fedcm_for_button
+            itp_support
+            width={String(
+              Math.min(
+                GOOGLE_MAX,
+                Math.max(GOOGLE_MIN, boxWidth - GOOGLE_IFRAME_MARGIN),
+              ),
+            )}
+            onError={() => toast.error("Google sign-in was cancelled.")}
+            onSuccess={async (response) => {
+              if (!response.credential) {
+                toast.error("Google did not return a credential. Try again.");
+                return;
+              }
 
-            try {
-              const result = await googleLogin.mutateAsync({
-                idToken: response.credential,
-              });
-
-              if (result.newUser) {
-                saveSignup({
-                  email: result.email,
-                  expiresInSec: result.expiresInSec,
+              try {
+                const result = await googleLogin.mutateAsync({
+                  idToken: response.credential,
                 });
-                toast.info(
-                  "Confirm your email to finish creating the account.",
+
+                if (result.newUser) {
+                  saveSignup({
+                    email: result.email,
+                    expiresInSec: result.expiresInSec,
+                  });
+                  toast.info(
+                    "Confirm your email to finish creating the account.",
+                  );
+                  router.push(routes.auth.verifyOtp);
+                  return;
+                }
+
+                if (result.twoFactorRequired) {
+                  saveChallenge({
+                    kind: "google",
+                    challengeId: result.challengeId,
+                    email: result.email,
+                    expiresInSec: result.expiresInSec,
+                  });
+                  router.push(routes.auth.twoFactor);
+                  return;
+                }
+
+                await signIn(result);
+                toast.success(
+                  `Welcome back, ${result.user.name.split(" ")[0]}.`,
                 );
-                router.push(routes.auth.verifyOtp);
-                return;
+                router.push(routes.complaints.list);
+              } catch (error) {
+                toast.error(errorMessage(error));
               }
-
-              if (result.twoFactorRequired) {
-                saveChallenge({
-                  kind: "google",
-                  challengeId: result.challengeId,
-                  email: result.email,
-                  expiresInSec: result.expiresInSec,
-                });
-                router.push(routes.auth.twoFactor);
-                return;
-              }
-
-              await signIn(result);
-              toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
-              router.push(routes.complaints.list);
-            } catch (error) {
-              toast.error(errorMessage(error));
-            }
-          }}
-        />
-      )}
+            }}
+          />
+        )}
+      </div>
+      {/**
+       * The escape hatch. Everything above happens inside Google's iframe, and
+       * when it declines to hand over a credential it tells us nothing — so a
+       * visitor whose browser the in-page flow cannot work in would otherwise
+       * just click a button that does nothing, forever. This is the same sign-in
+       * by the redirect route, which asks the browser for nothing it might
+       * refuse. It is deliberately quiet: it is for the few people who need it.
+       */}
+      <a
+        href={`${BASE_URL}/auth/google`}
+        className="mt-2 block text-center text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+      >
+        Button not working? Sign in with Google here
+      </a>
     </div>
   );
 }
