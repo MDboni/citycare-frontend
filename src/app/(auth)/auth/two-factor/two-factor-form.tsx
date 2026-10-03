@@ -2,12 +2,10 @@
 
 import { ShieldCheckIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { OtpForm } from "@/components/auth/otp-form";
-import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -23,10 +21,8 @@ import { leaveAuthScreen } from "@/lib/navigate";
 import { saveDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
-import type { Role } from "@/types";
 
 export function TwoFactorForm() {
-  const router = useRouter();
   const { signIn } = useAuth();
   const verify = useVerifyLoginOtp();
   const resend = useResendLoginOtp();
@@ -36,10 +32,6 @@ export function TwoFactorForm() {
   const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
-  const [staff, setStaff] = useState<{
-    name: string;
-    role: Exclude<Role, "CITIZEN">;
-  } | null>(null);
 
   useEffect(() => {
     const pending = getChallenge();
@@ -87,7 +79,7 @@ export function TwoFactorForm() {
       // this screen when it has 2FA on, and the code being right changes
       // nothing about this app being the wrong one for it.
       if (result.user.role !== "CITIZEN") {
-        setStaff({ name: result.user.name, role: result.user.role });
+        setError("This is a staff account. Use the CityCare staff console.");
         return;
       }
 
@@ -122,16 +114,6 @@ export function TwoFactorForm() {
       toast.error(errorMessage(caught));
     }
   };
-
-  if (staff) {
-    return (
-      <StaffAccountNotice
-        name={staff.name}
-        role={staff.role}
-        onBack={() => router.replace(routes.auth.login)}
-      />
-    );
-  }
 
   return (
     <AuthCard

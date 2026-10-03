@@ -4,29 +4,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DemoLoginPanel } from "@/components/auth/demo-login-panel";
 import { GoogleButton } from "@/components/auth/google-button";
-import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { PasswordField, TextField } from "@/components/shared/form-fields";
 import { Button } from "@/components/ui/button";
 import { FieldSeparator } from "@/components/ui/field";
 import { useLogin } from "@/hooks";
 import { toApiError } from "@/lib/api-error";
 import { saveChallenge } from "@/lib/challenge";
-import {
-  DEMO_ACCOUNTS,
-  DEMO_LOGINS_ENABLED,
-  type DemoRole,
-} from "@/lib/demo-accounts";
+import { DEMO_ACCOUNTS, type DemoRole } from "@/lib/demo-accounts";
 import { leaveAuthScreen } from "@/lib/navigate";
 import { getDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
-import type { Role } from "@/types";
 import { type LoginValues, loginSchema } from "@/validation";
 
 export function LoginForm() {
@@ -34,16 +28,6 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
   const login = useLogin();
-
-  /**
-   * Set when the credentials were right but the account is staff. Nothing is
-   * stored in that case — StaffAccountNotice explains why refusing beats
-   * signing them in and letting every page fail.
-   */
-  const [staff, setStaff] = useState<{
-    name: string;
-    role: Exclude<Role, "CITIZEN">;
-  } | null>(null);
 
   /** Which demo button is mid-flight, so the others can grey out. */
   const [pendingDemo, setPendingDemo] = useState<DemoRole | null>(null);
@@ -80,11 +64,14 @@ export function LoginForm() {
         return;
       }
 
-      // An officer or admin belongs in the staff console, and is told so
-      // before signIn stores anything: a staff session on this side is valid
-      // but 403s on every page, including the one carrying Sign out.
+      // An officer or admin is turned away before signIn stores anything: a
+      // staff session on this side is valid but 403s on every page, including
+      // the one carrying Sign out. The console owns those sessions; this app
+      // does not send anyone there, it just declines.
       if (result.user.role !== "CITIZEN") {
-        setStaff({ name: result.user.name, role: result.user.role });
+        setError("email", {
+          message: "This is a staff account. Use the CityCare staff console.",
+        });
         return;
       }
 
@@ -109,8 +96,8 @@ export function LoginForm() {
   });
 
   /**
-   * One click, no typing. Only the citizen account signs in here — the panel
-   * sends officer and admin to the console, which owns those sessions.
+   * One click, no typing. Only the resident account is offered here; staff sign
+   * in on the console, which owns those sessions.
    */
   const runDemo = useCallback(
     async (role: DemoRole) => {
@@ -137,7 +124,9 @@ export function LoginForm() {
         }
 
         if (result.user.role !== "CITIZEN") {
-          setStaff({ name: result.user.name, role: result.user.role });
+          toast.error(
+            "That is a staff account. Use the CityCare staff console.",
+          );
           return;
         }
 
@@ -152,30 +141,6 @@ export function LoginForm() {
     },
     [login, next, router, signIn],
   );
-
-  /**
-   * Arriving from the console's own panel with `?demo=citizen`. The ref keeps
-   * a re-render from firing a second sign-in on top of the first.
-   */
-  const demoParam = searchParams.get("demo");
-  const autoRan = useRef(false);
-  useEffect(() => {
-    if (autoRan.current || !DEMO_LOGINS_ENABLED || demoParam !== "citizen") {
-      return;
-    }
-    autoRan.current = true;
-    void runDemo("citizen");
-  }, [demoParam, runDemo]);
-
-  if (staff) {
-    return (
-      <StaffAccountNotice
-        name={staff.name}
-        role={staff.role}
-        onBack={() => setStaff(null)}
-      />
-    );
-  }
 
   return (
     <AuthCard
