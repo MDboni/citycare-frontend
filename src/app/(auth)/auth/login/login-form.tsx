@@ -10,19 +10,18 @@ import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { DemoLoginPanel } from "@/components/auth/demo-login-panel";
 import { GoogleButton } from "@/components/auth/google-button";
-import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { PasswordField, TextField } from "@/components/shared/form-fields";
 import { Button } from "@/components/ui/button";
 import { FieldSeparator } from "@/components/ui/field";
 import { useLogin } from "@/hooks";
 import { toApiError } from "@/lib/api-error";
+import { staffLoginUrl } from "@/lib/app-urls";
 import { saveChallenge } from "@/lib/challenge";
 import { DEMO_ACCOUNTS, type DemoRole } from "@/lib/demo-accounts";
 import { leaveAuthScreen } from "@/lib/navigate";
 import { getDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
-import type { Role } from "@/types";
 import { type LoginValues, loginSchema } from "@/validation";
 
 export function LoginForm() {
@@ -30,17 +29,6 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
   const login = useLogin();
-
-  /**
-   * Set when the credentials were right but the account is staff. Nothing is
-   * stored in that case: a staff session here is valid but 403s on every page,
-   * including the one carrying Sign out. The notice says so and offers the one
-   * door that does work — the console, which owns those sessions.
-   */
-  const [staff, setStaff] = useState<{
-    name: string;
-    role: Exclude<Role, "CITIZEN">;
-  } | null>(null);
 
   /** Which demo button is mid-flight, so the others can grey out. */
   const [pendingDemo, setPendingDemo] = useState<DemoRole | null>(null);
@@ -77,9 +65,14 @@ export function LoginForm() {
         return;
       }
 
-      // An officer or admin is told so before signIn stores anything.
+      /**
+       * An officer or admin is handed over before signIn stores anything. A
+       * staff session on this side is valid but 403s on every page, Sign out
+       * included, so there is nothing here to keep them for — the console owns
+       * those sessions and this takes them straight to it, address in hand.
+       */
       if (result.user.role !== "CITIZEN") {
-        setStaff({ name: result.user.name, role: result.user.role });
+        leaveAuthScreen(staffLoginUrl(result.user.email));
         return;
       }
 
@@ -132,7 +125,7 @@ export function LoginForm() {
         }
 
         if (result.user.role !== "CITIZEN") {
-          setStaff({ name: result.user.name, role: result.user.role });
+          leaveAuthScreen(staffLoginUrl(result.user.email));
           return;
         }
 
@@ -147,16 +140,6 @@ export function LoginForm() {
     },
     [login, next, router, signIn],
   );
-
-  if (staff) {
-    return (
-      <StaffAccountNotice
-        name={staff.name}
-        role={staff.role}
-        onBack={() => setStaff(null)}
-      />
-    );
-  }
 
   return (
     <AuthCard

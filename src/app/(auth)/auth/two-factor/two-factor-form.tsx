@@ -6,12 +6,12 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AuthCard } from "@/components/auth/auth-card";
 import { OtpForm } from "@/components/auth/otp-form";
-import { StaffAccountNotice } from "@/components/auth/staff-account-notice";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { useResendLoginOtp, useVerifyLoginOtp } from "@/hooks";
 import { errorMessage } from "@/lib/api-error";
+import { staffLoginUrl } from "@/lib/app-urls";
 import {
   clearChallenge,
   getChallenge,
@@ -22,7 +22,6 @@ import { leaveAuthScreen } from "@/lib/navigate";
 import { saveDeviceToken } from "@/lib/session";
 import { useAuth } from "@/providers";
 import { routes } from "@/routes";
-import type { Role } from "@/types";
 
 export function TwoFactorForm() {
   const { signIn } = useAuth();
@@ -34,12 +33,6 @@ export function TwoFactorForm() {
   const [trustDevice, setTrustDevice] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
-  /** Same refusal as the password screen: a right code does not make this the
-      right app for a staff account. */
-  const [staff, setStaff] = useState<{
-    name: string;
-    role: Exclude<Role, "CITIZEN">;
-  } | null>(null);
 
   useEffect(() => {
     const pending = getChallenge();
@@ -51,16 +44,6 @@ export function TwoFactorForm() {
     }
     setChecked(true);
   }, []);
-
-  if (staff) {
-    return (
-      <StaffAccountNotice
-        name={staff.name}
-        role={staff.role}
-        onBack={() => leaveAuthScreen(routes.auth.login)}
-      />
-    );
-  }
 
   if (checked && !challenge) {
     return (
@@ -97,7 +80,7 @@ export function TwoFactorForm() {
       // this screen when it has 2FA on, and the code being right changes
       // nothing about this app being the wrong one for it.
       if (result.user.role !== "CITIZEN") {
-        setStaff({ name: result.user.name, role: result.user.role });
+        leaveAuthScreen(staffLoginUrl(result.user.email));
         return;
       }
 
