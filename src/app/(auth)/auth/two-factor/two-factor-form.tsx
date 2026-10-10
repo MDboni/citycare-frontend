@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { useResendLoginOtp, useVerifyLoginOtp } from "@/hooks";
 import { errorMessage } from "@/lib/api-error";
-import { staffLoginUrl } from "@/lib/app-urls";
 import {
   clearChallenge,
   getChallenge,
@@ -75,14 +74,6 @@ export function TwoFactorForm() {
       });
 
       clearChallenge();
-
-      // The same refusal as the password path — a staff account only reaches
-      // this screen when it has 2FA on, and the code being right changes
-      // nothing about this app being the wrong one for it.
-      if (result.user.role !== "CITIZEN") {
-        leaveAuthScreen(staffLoginUrl(result.user.email));
-        return;
-      }
 
       // Only a citizen ever gets a device token back; staff always type a code.
       saveDeviceToken(result.deviceToken);

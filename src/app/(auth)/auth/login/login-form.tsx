@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { FieldSeparator } from "@/components/ui/field";
 import { useLogin } from "@/hooks";
 import { toApiError } from "@/lib/api-error";
-import { staffLoginUrl } from "@/lib/app-urls";
 import { saveChallenge } from "@/lib/challenge";
 import { DEMO_ACCOUNTS, type DemoRole } from "@/lib/demo-accounts";
 import { leaveAuthScreen } from "@/lib/navigate";
@@ -65,17 +64,6 @@ export function LoginForm() {
         return;
       }
 
-      /**
-       * An officer or admin is handed over before signIn stores anything. A
-       * staff session on this side is valid but 403s on every page, Sign out
-       * included, so there is nothing here to keep them for — the console owns
-       * those sessions and this takes them straight to it, address in hand.
-       */
-      if (result.user.role !== "CITIZEN") {
-        leaveAuthScreen(staffLoginUrl(result.user.email));
-        return;
-      }
-
       await signIn(result);
       toast.success(`Welcome back, ${result.user.name.split(" ")[0]}.`);
       leaveAuthScreen(next);
@@ -121,11 +109,6 @@ export function LoginForm() {
             expiresInSec: result.expiresInSec,
           });
           router.push(routes.auth.twoFactor);
-          return;
-        }
-
-        if (result.user.role !== "CITIZEN") {
-          leaveAuthScreen(staffLoginUrl(result.user.email));
           return;
         }
 
